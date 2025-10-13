@@ -1,0 +1,10 @@
+{
+  "name": "campusconnect",
+  "version": "2.0.0",
+  "description": "Campus management platform",
+  "scripts": {
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "license": "MIT"
+}
