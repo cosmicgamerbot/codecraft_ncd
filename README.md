@@ -4,7 +4,13 @@ CampusConnect is a comprehensive platform designed to streamline campus life by 
 ## Recent Activity
 ![GitHub Activity Graph](https://github-readme-activity-graph.vercel.app/graph?username=cosmicgamerbot&repo=codecraft_ncd&days=2&area=true&theme=github-compact&hide_border=true)
 
+## Contributors
+![Contributors](https://contrib.rocks/image?repo=cosmicgamerbot/codecraft_ncd)
+
+[📊 View Full Contributors Activity Graph](https://github.com/cosmicgamerbot/codecraft_ncd/graphs/contributors)
+
 ## Features
+
 ### 🎓 Academic Management
 - **Course Information**: Access course schedules, syllabi, and learning materials
 - **Assignment Tracking**: Keep track of assignments and deadlines
@@ -31,6 +37,7 @@ CampusConnect is a comprehensive platform designed to streamline campus life by 
 - **Multi-channel Delivery**: Receive updates via email, SMS, or push notifications
 
 ## Usage
+
 ### Getting Started
 1. Visit the CampusConnect website
 2. Sign up using your institutional email address
