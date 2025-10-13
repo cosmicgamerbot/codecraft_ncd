@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
+    <title>CampusConnect - Fixed Camera & Payment</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ2FtcHVzQ29ubmVjdCIsInNob3J0X25hbWUiOiJDYW1wdXNDb25uZWN0IiwiZGVzY3JpcHRpb24iOiJZb3VyIHVuaWZpZWQgY2FtcHVzIHBsYXRmb3JtIiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNGNUY3RkEiLCJ0aGVtZV9jb2xvciI6IiMyMTk2RjMiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCM2FXUjBhRDBpTVRFeU1DSWdhR1ZwWjJoMFBTSXhNakFpSUhabGNuTnBiMjQ5SWpFdU1TSWdlRzFzYm5NOUltaDBkSEE2THk5M2QzY3Vkek11YjNKbkx6SXdNREF2YzNabklqNDhjbVZqZENCM2FXUjBhRDBpTVRFeU1DSWdhR1ZwWjJoMFBTSXhNakFpSUdacGJHdzlJaU15TVRrMlJqTWlMejQ4TDNOMlp6ND0iLCJzaXplcyI6IjEyMHgxMjAiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+        :root {
+            --primary-blue: #2196F3;
+            --primary-dark: #1976D2;
+            --primary-light: #BBDEFB;
+            --secondary-teal: #00BCD4;
+            --accent-orange: #FF9800;
+            --success-green: #4CAF50;
+            --error-red: #F44336;
+            --background: #F5F7FA;
+            --surface: #FFFFFF;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --border: #E0E0E0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            margin: 0;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        .material-symbols-rounded {
+            font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+
+        .animate-spin { animation: spin 1s linear infinite; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+        
+        #qr-reader video { width: 100% !important; height: auto !important; border-radius: 8px; }
+        .hidden { display: none !important; }
+        
+        #app-container { padding-top: 4rem; padding-bottom: 4rem; min-height: 100vh; }
+        
+        .modal-backdrop { backdrop-filter: blur(4px); }
+        .search-input:focus { box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1); }
+        .book-card:hover { transform: translateY(-4px); transition: all 0.3s ease; }
+        
+        .razorpay-modal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .payment-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .shimmer-loading {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-blue-100 to-teal-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-teal-400 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                    <span class="text-4xl font-black text-white">C</span>
+                </div>
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Campus<span class="text-teal-500">Connect</span></h1>
+                <p class="text-gray-600">Your unified campus platform</p>
+            </div>
+
+            <div id="login-form">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Welcome Back</h2>
+                <form onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Email</label>
+                        <input type="email" id="login-email" value="student@campus.edu" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="student@campus.edu">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Password</label>
+                        <input type="password" id="login-password" value="password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-lg hover:opacity-90 transition-all shadow-md">
+                        Login
+                    </button>
+                </form>
+                <p class="mt-4 text-center text-sm text-gray-600">
+                    Don't have an account? <button onclick="showSignup()" class="text-blue-500 font-semibold hover:underline">Sign Up</button>
+                </p>
+            </div>
+
+            <div id="signup-form" class="hidden">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Create Account</h2>
+                <form onsubmit="handleSignup(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Full Name</label>
+                        <input type="text" id="signup-name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="Aashish Kumar">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Roll Number</label>
+                        <input type="text" id="signup-roll" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="CS2023001">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Email</label>
+                        <input type="email" id="signup-email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="student@campus.edu">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">Password</label>
+                        <input type="password" id="signup-password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-lg hover:opacity-90 transition-all shadow-md">
+                        Create Account
+                    </button>
+                </form>
+                <p class="mt-4 text-center text-sm text-gray-600">
+                    Already have an account? <button onclick="showLogin()" class="text-blue-500 font-semibold hover:underline">Login</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="main-app" class="hidden">
+        <header id="top-bar" class="fixed top-0 left-0 right-0 z-20 flex items-center justify-between h-16 px-4 bg-white shadow-md">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-400 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">C</span>
+                </div>
+                <span class="text-lg font-bold text-gray-800">Campus<span class="text-teal-500">Connect</span></span>
+            </div>
+            <button id="notification-button" class="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <span class="material-symbols-rounded text-gray-700">notifications</span>
+                <span id="notification-badge" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            </button>
+        </header>
+
+        <div id="app-container" class="bg-gray-50">
+            <div id="main-content" class="p-4 pt-2"></div>
+        </div>
+
+        <button id="fab-qr" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-30 w-16 h-16 rounded-full shadow-2xl bg-gradient-to-br from-blue-500 to-teal-400 text-white flex items-center justify-center transition-all duration-300 hover:scale-110">
+            <span class="material-symbols-rounded" style="font-size: 32px;">qr_code_scanner</span>
+        </button>
+
+        <footer id="bottom-nav-bar" class="fixed bottom-0 left-0 right-0 z-20 h-16 bg-white shadow-2xl">
+            <nav class="flex justify-around h-full">
+                <a href="#" data-page="home" class="nav-item flex flex-col items-center justify-center pt-1 px-1 text-xs transition-all text-blue-500">
+                    <span class="material-symbols-rounded w-6 h-6 mb-0.5" style="font-size: 24px;">home</span>
+                    <span class="font-medium">Home</span>
+                </a>
+                <a href="#" data-page="library" class="nav-item flex flex-col items-center justify-center pt-1 px-1 text-xs transition-all text-gray-600 hover:text-blue-600">
+                    <span class="material-symbols-rounded w-6 h-6 mb-0.5" style="font-size: 24px;">local_library</span>
+                    <span class="font-medium">Library</span>
+                </a>
+                <a href="#" data-page="canteen" class="nav-item flex flex-col items-center justify-center pt-1 px-1 text-xs transition-all text-gray-600 hover:text-blue-600" style="margin-left: 3.5rem;">
+                    <span class="material-symbols-rounded w-6 h-6 mb-0.5" style="font-size: 24px;">restaurant</span>
+                    <span class="font-medium">Canteen</span>
+                </a>
+                <a href="#" data-page="profile" class="nav-item flex flex-col items-center justify-center pt-1 px-1 text-xs transition-all text-gray-600 hover:text-blue-600">
+                    <span class="material-symbols-rounded w-6 h-6 mb-0.5" style="font-size: 24px;">person</span>
+                    <span class="font-medium">Profile</span>
+                </a>
+            </nav>
+        </footer>
+
+        <!-- Notification Center -->
+        <div id="notification-center-overlay" class="fixed inset-0 bg-black bg-opacity-30 z-30 hidden modal-backdrop"></div>
+        <div id="notification-center" class="fixed top-0 right-0 z-40 h-full w-full max-w-sm bg-white shadow-2xl transform translate-x-full transition-transform duration-300">
+            <div class="p-6 h-full flex flex-col">
+                <div class="flex justify-between items-center pb-4 border-b">
+                    <h3 class="text-xl font-bold text-gray-800">Notifications</h3>
+                    <button id="close-notifications" class="text-gray-600 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div id="notifications-list" class="flex-grow overflow-y-auto pt-4 space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- QR Modal -->
+        <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4 modal-backdrop">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="qr-modal-title" class="text-xl font-bold text-gray-800">Scan Campus QR Code</h3>
+                    <button id="close-qr-scanner" class="text-gray-600 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+
+                <div class="flex mb-4 p-1 bg-gray-100 rounded-lg">
+                    <button id="tab-scan" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-blue-500 text-white transition-all">Scan Code</button>
+                    <button id="tab-my-code" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:bg-white transition-all">My Code</button>
+                </div>
+
+                <div id="qr-scan-container" class="w-full">
+                    <div id="qr-reader" class="w-full aspect-square bg-gray-200 rounded-lg overflow-hidden"></div>
+                    <div id="qr-result-status" class="mt-4 p-3 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg text-center">
+                        Awaiting scan...
+                    </div>
+                </div>
+
+                <div id="qr-my-code-container" class="w-full hidden text-center">
+                    <div id="qrcode-display" class="mx-auto p-4 bg-white rounded-lg shadow-inner border-2 border-gray-200 flex items-center justify-center"></div>
+                    <p class="mt-4 text-sm text-gray-600">Show this code for verification</p>
+                    <p class="mt-1 text-xs font-semibold text-blue-600">ID: <span id="display-user-id"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Method Selection Modal -->
+        <div id="payment-method-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Choose Payment Method</h3>
+                    <button onclick="closePaymentMethodModal()" class="text-gray-600 hover:text-red-500 p-2 rounded-full hover:bg-gray-100">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+
+                <div class="mb-6 text-center">
+                    <p class="text-sm text-gray-600 mb-2">Amount to Pay</p>
+                    <h2 class="text-4xl font-bold text-gray-800" id="payment-method-amount">₹0</h2>
+                </div>
+
+                <!-- Wallet Payment Option -->
+                <button onclick="payWithWallet()" id="wallet-payment-btn" class="w-full p-4 mb-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-teal-400 rounded-xl flex items-center justify-center mr-4">
+                                <span class="material-symbols-rounded text-white text-2xl">account_balance_wallet</span>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-bold text-gray-800">Campus Wallet</p>
+                                <p class="text-sm text-gray-600">Balance: <span id="wallet-balance-display" class="font-semibold">₹0</span></p>
+                            </div>
+                        </div>
+                        <span class="material-symbols-rounded text-gray-400">chevron_right</span>
+                    </div>
+                </button>
+
+                <!-- Razorpay Payment Option -->
+                <button onclick="payWithRazorpay()" class="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center mr-4">
+                                <span class="text-white text-xl font-black">R</span>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-bold text-gray-800">Razorpay</p>
+                                <p class="text-sm text-gray-600">UPI, Cards, Wallets</p>
+                            </div>
+                        </div>
+                        <span class="material-symbols-rounded text-gray-400">chevron_right</span>
+                    </div>
+                </button>
+
+                <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p class="text-xs text-blue-800 text-center">
+                        <span class="material-symbols-rounded align-middle text-sm mr-1">info</span>
+                        Choose your preferred payment method
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Razorpay Payment Modal -->
+        <div id="razorpay-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
+            <div class="razorpay-modal rounded-2xl shadow-2xl max-w-md w-full p-6 slide-up">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                            <span class="text-2xl font-black text-purple-600">R</span>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-bold text-lg">Razorpay</h3>
+                            <p class="text-purple-200 text-xs">Secure Payment</p>
+                        </div>
+                    </div>
+                    <button onclick="closeRazorpay()" class="text-white hover:text-red-300 p-2 rounded-full hover:bg-white hover:bg-opacity-20">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+
+                <div class="payment-card rounded-xl p-6 mb-4">
+                    <div class="text-center mb-6">
+                        <p class="text-sm text-gray-600 mb-2">Amount to Pay</p>
+                        <h2 class="text-4xl font-bold text-gray-800" id="payment-amount">₹0</h2>
+                        <p class="text-xs text-gray-500 mt-1" id="payment-description">Wallet Recharge</p>
+                    </div>
+
+                    <div id="payment-methods">
+                        <h4 class="font-semibold text-gray-800 mb-3">Choose Payment Method</h4>
+                        
+                        <!-- UPI Apps -->
+                        <button onclick="selectPaymentMethod('upi')" class="payment-method w-full p-4 border-2 border-gray-200 rounded-lg mb-3 hover:border-purple-500 transition-all flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="material-symbols-rounded text-purple-600">account_balance</span>
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-semibold text-gray-800">UPI</p>
+                                    <p class="text-xs text-gray-500">Google Pay, PhonePe, Paytm</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-rounded text-gray-400">chevron_right</span>
+                        </button>
+
+                        <!-- Card -->
+                        <button onclick="selectPaymentMethod('card')" class="payment-method w-full p-4 border-2 border-gray-200 rounded-lg mb-3 hover:border-purple-500 transition-all flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="material-symbols-rounded text-blue-600">credit_card</span>
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-semibold text-gray-800">Debit/Credit Card</p>
+                                    <p class="text-xs text-gray-500">Visa, Mastercard, RuPay</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-rounded text-gray-400">chevron_right</span>
+                        </button>
+
+                        <!-- Wallet -->
+                        <button onclick="selectPaymentMethod('wallet')" class="payment-method w-full p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 transition-all flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="material-symbols-rounded text-green-600">account_balance_wallet</span>
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-semibold text-gray-800">Digital Wallet</p>
+                                    <p class="text-xs text-gray-500">Paytm, Amazon Pay, Mobikwik</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-rounded text-gray-400">chevron_right</span>
+                        </button>
+                    </div>
+
+                    <!-- Payment Details Form (Hidden Initially) -->
+                    <div id="payment-details" class="hidden">
+                        <button onclick="showPaymentMethods()" class="text-purple-600 text-sm mb-4 flex items-center hover:underline">
+                            <span class="material-symbols-rounded mr-1 text-sm">arrow_back</span> Change Method
+                        </button>
+                        
+                        <div id="upi-form" class="hidden">
+                            <label class="block text-sm font-medium mb-2 text-gray-700">UPI ID</label>
+                            <input type="text" id="upi-id" placeholder="yourname@paytm" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 mb-2">
+                            <p class="text-xs text-gray-500 mb-4">Supports: Google Pay, PhonePe, Paytm, BHIM, and all UPI apps</p>
+                        </div>
+
+                        <div id="card-form" class="hidden">
+                            <label class="block text-sm font-medium mb-2 text-gray-700">Card Number</label>
+                            <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 mb-3">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-700">Expiry</label>
+                                    <input type="text" id="card-expiry" placeholder="MM/YY" maxlength="5"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-700">CVV</label>
+                                    <input type="text" id="card-cvv" placeholder="123" maxlength="3"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="wallet-form" class="hidden">
+                            <p class="text-sm text-gray-600 mb-4">You will be redirected to your selected app to complete the payment.</p>
+                            <select id="wallet-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 mb-4">
+                                <option value="googlepay">Google Pay</option>
+                                <option value="phonepe">PhonePe</option>
+                                <option value="paytm">Paytm</option>
+                                <option value="amazonpay">Amazon Pay</option>
+                                <option value="mobikwik">Mobikwik</option>
+                                <option value="freecharge">Freecharge</option>
+                            </select>
+                        </div>
+
+                        <button onclick="processPayment()" id="pay-button" 
+                                class="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg hover:opacity-90 transition-all shadow-lg">
+                            Pay Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Processing Screen -->
+                <div id="payment-processing" class="hidden payment-card rounded-xl p-8 text-center">
+                    <div class="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <h4 class="font-bold text-gray-800 text-lg mb-2">Processing Payment...</h4>
+                    <p class="text-sm text-gray-600">Please wait while we confirm your payment</p>
+                </div>
+
+                <!-- Success Screen -->
+                <div id="payment-success" class="hidden payment-card rounded-xl p-8 text-center">
+                    <div class="w-20 h-20 bg-green-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <span class="material-symbols-rounded text-5xl text-green-600">check_circle</span>
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-xl mb-2">Payment Successful!</h4>
+                    <p class="text-sm text-gray-600 mb-4">Your transaction has been completed</p>
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-gray-600">Transaction ID</span>
+                            <span class="font-semibold" id="txn-id">TXN123456789</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Amount Paid</span>
+                            <span class="font-bold text-green-600" id="paid-amount">₹500</span>
+                        </div>
+                    </div>
+                    <button onclick="closeRazorpaySuccess()" class="w-full py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700">
+                        Done
+                    </button>
+                </div>
+
+                <div class="text-center mt-4">
+                    <p class="text-purple-100 text-xs">🔒 Secured by Razorpay</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Modal -->
+        <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4 modal-backdrop">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                        <span class="material-symbols-rounded mr-2 text-teal-500">psychology</span>
+                        AI Meal Advisor
+                    </h3>
+                    <button onclick="closeAiModal()" class="text-gray-600 hover:text-red-500 p-2 rounded-full hover:bg-gray-100">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div id="ai-result" class="mt-4"></div>
+            </div>
+        </div>
+
+        <!-- Order Tracking Modal -->
+        <div id="order-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4 modal-backdrop">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Order Tracking</h3>
+                    <button onclick="closeOrderModal()" class="text-gray-600 hover:text-red-500 p-2 rounded-full hover:bg-gray-100">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div id="order-tracking-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== ERROR HANDLING WRAPPER ==========
+        function safeExecute(fn, errorMessage = 'An error occurred') {
+            try {
+                return fn();
+            } catch (error) {
+                console.error(errorMessage, error);
+                showError(errorMessage);
+                return null;
+            }
+        }
+
+        function showError(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 fade-in';
+            notification.innerHTML = `<span class="material-symbols-rounded align-middle mr-2">error</span>${message}`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function showSuccess(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 fade-in';
+            notification.innerHTML = `<span class="material-symbols-rounded align-middle mr-2">check_circle</span>${message}`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 2000);
+        }
+
+        // ========== SAFE LOCALSTORAGE ==========
+        function safeGetItem(key, defaultValue = null) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch (error) {
+                console.error(`Error reading ${key} from localStorage:`, error);
+                return defaultValue;
+            }
+        }
+
+        function safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (error) {
+                if (error.name === 'QuotaExceededError') {
+                    showError('Storage quota exceeded. Please clear some data.');
+                } else {
+                    showError('Failed to save data.');
+                }
+                console.error(`Error writing ${key} to localStorage:`, error);
+                return false;
+            }
+        }
+
+        // ========== STATE MANAGEMENT ==========
+        let currentUser = null;
+        let html5QrCode = null;
+        let cart = [];
+        let borrowedBooks = [];
+        let notifications = [];
+        let orders = [];
+        let transactions = [];
+        let availableBooks = [];
+        let sustainabilityScore = 85;
+        let ecoChoices = 42;
+        let currentPaymentAmount = 0;
+        let currentPaymentType = '';
+        let selectedPaymentMethod = '';
+        let pendingCheckout = false;
+        
+        // Menu items lookup for easy access
+        const MENU_ITEMS = {
+            1: { id: 1, name: 'Veg Biryani', price: 60, veg: true, emoji: '🍚', calories: 450, protein: 12 },
+            2: { id: 2, name: 'Paneer Tikka', price: 80, veg: true, emoji: '🧈', calories: 350, protein: 18 },
+            3: { id: 3, name: 'Masala Dosa', price: 50, veg: true, emoji: '🥞', calories: 300, protein: 8 },
+            4: { id: 4, name: 'Chole Bhature', price: 70, veg: true, emoji: '🍛', calories: 500, protein: 15 },
+            5: { id: 5, name: 'Pasta Alfredo', price: 90, veg: true, emoji: '🍝', calories: 400, protein: 10 },
+            6: { id: 6, name: 'Veg Sandwich', price: 40, veg: true, emoji: '🥪', calories: 250, protein: 7 }
+        };
+
+        // ========== DATA INITIALIZATION ==========
+        function initializeData() {
+            availableBooks = [
+                { id: 1, title: 'The Tech Future', author: 'John Tech', available: true, category: 'Technology', rating: 4.5 },
+                { id: 2, title: 'Data Science 101', author: 'Jane Data', available: true, category: 'Science', rating: 4.8 },
+                { id: 3, title: 'Campus Life Hacks', author: 'Alex Campus', available: false, category: 'Lifestyle', rating: 4.2 },
+                { id: 4, title: 'AI Revolution', author: 'Sara AI', available: true, category: 'Technology', rating: 4.7 },
+                { id: 5, title: 'Quantum Physics', author: 'Bob Quantum', available: true, category: 'Science', rating: 4.6 },
+                { id: 6, title: 'Design Thinking', author: 'Emma Design', available: true, category: 'Design', rating: 4.4 }
+            ];
+
+            borrowedBooks = safeGetItem('borrowed_books', [
+                { id: 1, title: 'The Silent Observer', dueDate: '2025-10-15', author: 'John Doe', fine: 0 },
+                { id: 2, title: 'Campus Chronicles', dueDate: '2025-10-20', author: 'Jane Smith', fine: 0 },
+                { id: 3, title: 'Tech Future', dueDate: '2025-10-18', author: 'Alan Tech', fine: 0 }
+            ]);
+
+            notifications = [
+                { id: 1, icon: 'check_circle', color: 'green', title: 'Your order #45 is ready!', time: '2 min ago', type: 'success' },
+                { id: 2, icon: 'menu_book', color: 'blue', title: '"Silent Observer" due tomorrow', time: '3 hours ago', type: 'warning' },
+                { id: 3, icon: 'account_balance_wallet', color: 'green', title: 'Wallet recharged: +₹500', time: 'Today', type: 'info' },
+                { id: 4, icon: 'workspace_premium', color: 'orange', title: 'You earned 50 reward points!', time: 'Yesterday', type: 'success' },
+                { id: 5, icon: 'spa', color: 'teal', title: 'Eco milestone: 100 sustainable choices!', time: '2 days ago', type: 'success' }
+            ];
+
+            orders = safeGetItem('orders', []);
+            transactions = safeGetItem('transactions', []);
+        }
+
+        // ========== AUTH FUNCTIONS ==========
+        function handleLogin(e) {
+            e.preventDefault();
+            safeExecute(() => {
+                const email = document.getElementById('login-email').value?.trim();
+                const password = document.getElementById('login-password').value;
+
+                if (!email || !password) {
+                    showError('Please enter both email and password');
+                    return;
+                }
+
+                const users = safeGetItem('campusconnect_users', []);
+                const user = users.find(u => u.email === email && u.password === password);
+
+                if (user) {
+                    currentUser = user;
+                    safeSetItem('campusconnect_current_user', user);
+                    showMainApp();
+                    showSuccess('Welcome back!');
+                } else {
+                    showError('Invalid credentials!');
+                }
+            }, 'Login failed');
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            safeExecute(() => {
+                const name = document.getElementById('signup-name').value?.trim();
+                const roll = document.getElementById('signup-roll').value?.trim();
+                const email = document.getElementById('signup-email').value?.trim();
+                const password = document.getElementById('signup-password').value;
+
+                if (!name || !roll || !email || !password) {
+                    showError('Please fill all fields');
+                    return;
+                }
+
+                const users = safeGetItem('campusconnect_users', []);
+                
+                if (users.find(u => u.email === email)) {
+                    showError('User already exists!');
+                    return;
+                }
+
+                const newUser = {
+                    id: Date.now(),
+                    name,
+                    roll,
+                    email,
+                    password,
+                    wallet: 1000,
+                    points: 850,
+                    campus: 'Main Campus',
+                    createdAt: new Date().toISOString()
+                };
+
+                users.push(newUser);
+                if (!safeSetItem('campusconnect_users', users)) return;
+                
+                currentUser = newUser;
+                safeSetItem('campusconnect_current_user', newUser);
+                showMainApp();
+                showSuccess('Account created successfully!');
+            }, 'Signup failed');
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('signup-form').classList.add('hidden');
+        }
+
+        function showSignup() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('signup-form').classList.remove('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            initializeApp();
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                safeExecute(() => {
+                    localStorage.removeItem('campusconnect_current_user');
+                    currentUser = null;
+                    location.reload();
+                }, 'Logout failed');
+            }
+        }
+
+        // ========== APP INITIALIZATION ==========
+        function initializeApp() {
+            safeExecute(() => {
+                console.log('Initializing app...');
+                initializeData();
+                cart = safeGetItem('campusconnect_cart', []);
+                console.log('Cart loaded:', cart);
+                console.log('Current user:', currentUser);
+                loadPage('home');
+                updateNotificationsList();
+                console.log('App initialized successfully');
+            }, 'Failed to initialize app');
+        }
+
+        // ========== QR FUNCTIONS ==========
+        function startScannerCamera() {
+            console.log('Starting QR scanner...');
+            
+            const statusDiv = document.getElementById('qr-result-status');
+            if (!statusDiv) {
+                console.error('QR result status div not found');
+                showError('QR scanner UI not ready');
+                return;
+            }
+            
+            // Check if Html5Qrcode is available (case-sensitive)
+            if (typeof window.Html5Qrcode === 'undefined') {
+                console.error('Html5Qrcode library not loaded');
+                statusDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 text-sm font-medium rounded-lg text-center';
+                statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2">error</span>QR library not loaded. Please refresh.';
+                showError('QR scanner library not loaded. Please refresh the page.');
+                return;
+            }
+
+            safeExecute(() => {
+                if (!html5QrCode) {
+                    console.log('Creating new Html5Qrcode instance');
+                    html5QrCode = new window.Html5Qrcode("qr-reader");
+                }
+                
+                if (html5QrCode.isScanning) {
+                    console.log('Scanner already running');
+                    return;
+                }
+                
+                statusDiv.className = 'mt-4 p-3 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg text-center';
+                statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2 animate-pulse">qr_code_scanner</span>Starting camera...';
+                
+                console.log('Requesting camera permission...');
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        console.log('QR Code scanned:', decodedText);
+                        statusDiv.className = 'mt-4 p-3 bg-green-100 text-green-800 text-sm font-medium rounded-lg text-center';
+                        statusDiv.innerHTML = `<span class="material-symbols-rounded align-middle mr-2">check_circle</span>Success: <strong>${decodedText}</strong>`;
+                        stopScannerCamera();
+                        setTimeout(() => processQRCode(decodedText), 1000);
+                    },
+                    (errorMessage) => {
+                        // Ignore frequent "no QR code found" messages
+                    }
+                ).then(() => {
+                    console.log('QR scanner started successfully');
+                    statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2 animate-pulse">qr_code_scanner</span>Point camera at QR code...';
+                }).catch(err => {
+                    console.error('Failed to start QR scanner:', err);
+                    statusDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 text-sm font-medium rounded-lg text-center';
+                    
+                    if (err.toString().includes('NotAllowedError') || err.toString().includes('Permission')) {
+                        statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2">error</span>Camera permission denied. Please allow camera access.';
+                        showError('Camera permission denied. Please allow camera access in your browser settings.');
+                    } else if (err.toString().includes('NotFoundError')) {
+                        statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2">error</span>No camera found on device.';
+                        showError('No camera found on your device.');
+                    } else {
+                        statusDiv.innerHTML = '<span class="material-symbols-rounded align-middle mr-2">error</span>Failed to access camera.';
+                        showError('Failed to access camera: ' + err.toString());
+                    }
+                });
+            }, 'Failed to initialize QR scanner');
+        }
+
+        function processQRCode(data) {
+            console.log('Processing QR code:', data);
+            
+            if (data.startsWith('BOOK-')) {
+                const bookId = data.replace('BOOK-', '');
+                showSuccess(`Book QR Scanned: ${bookId}`);
+                alert(`Book QR Code Scanned!\n\nBook ID: ${bookId}\n\nThis would process book borrowing/return in a real system.`);
+            } else if (data.startsWith('ORDER-')) {
+                const orderId = data.replace('ORDER-', '');
+                showSuccess(`Order QR Scanned: ${orderId}`);
+                alert(`Order QR Code Scanned!\n\nOrder ID: ${orderId}\n\nVerifying pickup...`);
+            } else if (data.startsWith('PAYMENT-')) {
+                const paymentId = data.replace('PAYMENT-', '');
+                showSuccess(`Payment QR Scanned: ${paymentId}`);
+                alert(`Payment QR Code Scanned!\n\nPayment ID: ${paymentId}\n\nProcessing payment...`);
+            } else if (data.startsWith('CC-')) {
+                // Campus Connect user QR
+                showSuccess(`User QR Scanned: ${data}`);
+                alert(`Campus Connect User QR!\n\nUser ID: ${data}\n\nThis would verify user identity.`);
+            } else {
+                showSuccess(`QR Code Scanned: ${data}`);
+                alert(`QR Code Scanned Successfully!\n\nData: ${data}\n\nLength: ${data.length} characters`);
+            }
+            
+            closeQrModal();
+        }
+
+        function stopScannerCamera() {
+            console.log('Stopping QR scanner...');
+            
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    console.log('QR scanner stopped successfully');
+                }).catch(err => {
+                    console.warn('Error stopping scanner:', err);
+                });
+            }
+        }
+        
+        function generateUserQrCode() {
+            console.log('Generating user QR code...');
+            
+            const qrDisplay = document.getElementById('qrcode-display');
+            const displayUserId = document.getElementById('display-user-id');
+            
+            if (!qrDisplay || !displayUserId) {
+                console.error('QR display elements not found');
+                showError('QR display not ready');
+                return;
+            }
+            
+            if (!currentUser) {
+                console.error('No current user');
+                showError('User not logged in');
+                return;
+            }
+
+            safeExecute(() => {
+                const data = `CC-${currentUser.roll}-${currentUser.id}`;
+                console.log('Generating QR for:', data);
+                
+                displayUserId.textContent = data;
+                qrDisplay.innerHTML = '';
+
+                // Check if qrcode library is loaded (window.qrcode)
+                if (typeof window.qrcode === 'undefined') {
+                    console.error('qrcode library not loaded');
+                    qrDisplay.innerHTML = '<div class="text-red-600 font-semibold p-4">QR generation library not loaded. Please refresh the page.</div>';
+                    showError('QR generation library not loaded. Please refresh.');
+                    return;
+                }
+
+                try {
+                    const qr = window.qrcode(0, 'H');
+                    qr.addData(data);
+                    qr.make();
+                    
+                    const imgTag = qr.createImgTag(4);
+                    qrDisplay.innerHTML = imgTag;
+                    
+                    console.log('QR code generated successfully');
+                } catch (error) {
+                    console.error('QR generation error:', error);
+                    qrDisplay.innerHTML = '<div class="text-red-600 font-semibold p-4">Failed to generate QR code</div>';
+                    showError('Failed to generate QR code');
+                }
+            }, 'Failed to generate QR code');
+        }
+
+        function switchQrTab(tabName) {
+            console.log('Switching to QR tab:', tabName);
+            
+            const scanContainer = document.getElementById('qr-scan-container');
+            const myCodeContainer = document.getElementById('qr-my-code-container');
+            const tabScan = document.getElementById('tab-scan');
+            const tabMyCode = document.getElementById('tab-my-code');
+            const title = document.getElementById('qr-modal-title');
+            
+            if (!scanContainer || !myCodeContainer || !tabScan || !tabMyCode || !title) {
+                console.error('QR modal elements not found');
+                showError('QR modal not properly initialized');
+                return;
+            }
+
+            // Reset tab styles
+            [tabScan, tabMyCode].forEach(tab => {
+                tab.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:bg-white transition-all';
+            });
+
+            if (tabName === 'scan') {
+                console.log('Activating scan tab');
+                scanContainer.classList.remove('hidden');
+                myCodeContainer.classList.add('hidden');
+                tabScan.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-blue-500 text-white transition-all';
+                title.textContent = "Scan Campus QR Code";
+                
+                // Start camera after a small delay to ensure UI is ready
+                setTimeout(() => {
+                    startScannerCamera();
+                }, 100);
+            } else if (tabName === 'my-code') {
+                console.log('Activating my-code tab');
+                scanContainer.classList.add('hidden');
+                myCodeContainer.classList.remove('hidden');
+                tabMyCode.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-blue-500 text-white transition-all';
+                title.textContent = "My Verification Code";
+                
+                stopScannerCamera();
+                
+                // Generate QR after a small delay to ensure UI is ready
+                setTimeout(() => {
+                    generateUserQrCode();
+                }, 100);
+            }
+        }
+        
+        function openQrModal() {
+            console.log('Opening QR modal...');
+            
+            const qrModal = document.getElementById('qr-modal');
+            if (!qrModal) {
+                console.error('QR modal not found');
+                showError('QR modal not found. Please refresh the page.');
+                return;
+            }
+            
+            qrModal.style.display = 'flex';
+            console.log('QR modal opened');
+            
+            // Start with scan tab by default
+            switchQrTab('scan');
+        }
+
+        function closeQrModal() {
+            console.log('Closing QR modal...');
+            
+            stopScannerCamera();
+            
+            const qrModal = document.getElementById('qr-modal');
+            if (qrModal) {
+                qrModal.style.display = 'none';
+                console.log('QR modal closed');
+            }
+        }
+
+        // ========== RAZORPAY PAYMENT ==========
+        function openRazorpay(amount, type = 'wallet') {
+            if (!amount || amount <= 0) {
+                showError('Invalid amount');
+                return;
+            }
+
+            currentPaymentAmount = parseInt(amount);
+            currentPaymentType = type;
+            
+            document.getElementById('payment-amount').textContent = `₹${currentPaymentAmount}`;
+            document.getElementById('payment-description').textContent = type === 'wallet' ? 'Wallet Recharge' : type === 'canteen' ? 'Canteen Order' : 'Library Fine Payment';
+            
+            // Reset to payment methods screen
+            showPaymentMethods();
+            
+            document.getElementById('razorpay-modal').style.display = 'flex';
+        }
+
+        function closeRazorpay() {
+            document.getElementById('razorpay-modal').style.display = 'none';
+            resetRazorpay();
+        }
+
+        function resetRazorpay() {
+            document.getElementById('payment-methods').classList.remove('hidden');
+            document.getElementById('payment-details').classList.add('hidden');
+            document.getElementById('payment-processing').classList.add('hidden');
+            document.getElementById('payment-success').classList.add('hidden');
+            
+            // Clear forms
+            document.getElementById('upi-id').value = '';
+            document.getElementById('card-number').value = '';
+            document.getElementById('card-expiry').value = '';
+            document.getElementById('card-cvv').value = '';
+        }
+
+        function showPaymentMethods() {
+            document.getElementById('payment-methods').classList.remove('hidden');
+            document.getElementById('payment-details').classList.add('hidden');
+            document.getElementById('upi-form').classList.add('hidden');
+            document.getElementById('card-form').classList.add('hidden');
+            document.getElementById('wallet-form').classList.add('hidden');
+        }
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            document.getElementById('payment-methods').classList.add('hidden');
+            document.getElementById('payment-details').classList.remove('hidden');
+            
+            // Show appropriate form
+            document.getElementById('upi-form').classList.add('hidden');
+            document.getElementById('card-form').classList.add('hidden');
+            document.getElementById('wallet-form').classList.add('hidden');
+            
+            if (method === 'upi') {
+                document.getElementById('upi-form').classList.remove('hidden');
+            } else if (method === 'card') {
+                document.getElementById('card-form').classList.remove('hidden');
+                // Format card number input
+                const cardInput = document.getElementById('card-number');
+                cardInput.addEventListener('input', (e) => {
+                    let value = e.target.value.replace(/\s/g, '');
+                    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+                    e.target.value = formattedValue;
+                });
+                
+                // Format expiry input
+                const expiryInput = document.getElementById('card-expiry');
+                expiryInput.addEventListener('input', (e) => {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length >= 2) {
+                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                    }
+                    e.target.value = value;
+                });
+            } else if (method === 'wallet') {
+                document.getElementById('wallet-form').classList.remove('hidden');
+            }
+        }
+
+        function processPayment() {
+            safeExecute(() => {
+                // Validate based on payment method
+                if (selectedPaymentMethod === 'upi') {
+                    const upiId = document.getElementById('upi-id').value.trim();
+                    if (!upiId || !upiId.includes('@')) {
+                        showError('Please enter a valid UPI ID (e.g., yourname@paytm)');
+                        return;
+                    }
+                } else if (selectedPaymentMethod === 'card') {
+                    const cardNumber = document.getElementById('card-number').value.replace(/\s/g, '');
+                    const expiry = document.getElementById('card-expiry').value;
+                    const cvv = document.getElementById('card-cvv').value;
+                    
+                    if (!cardNumber || cardNumber.length < 16) {
+                        showError('Please enter a valid 16-digit card number');
+                        return;
+                    }
+                    if (!expiry || expiry.length !== 5) {
+                        showError('Please enter valid expiry (MM/YY)');
+                        return;
+                    }
+                    if (!cvv || cvv.length !== 3) {
+                        showError('Please enter valid 3-digit CVV');
+                        return;
+                    }
+                } else if (selectedPaymentMethod === 'wallet') {
+                    const walletApp = document.getElementById('wallet-select').value;
+                    const walletNames = {
+                        'googlepay': 'Google Pay',
+                        'phonepe': 'PhonePe',
+                        'paytm': 'Paytm',
+                        'amazonpay': 'Amazon Pay',
+                        'mobikwik': 'Mobikwik',
+                        'freecharge': 'Freecharge'
+                    };
+                    
+                    // Show which app will open
+                    document.getElementById('payment-processing').querySelector('p').textContent = 
+                        `Redirecting to ${walletNames[walletApp]}...`;
+                }
+
+                // Show processing screen
+                document.getElementById('payment-details').classList.add('hidden');
+                document.getElementById('payment-processing').classList.remove('hidden');
+
+                // Simulate payment processing (2 seconds)
+                setTimeout(() => {
+                    completePayment();
+                }, 2000);
+            }, 'Payment processing failed');
+        }
+
+        function completePayment() {
+            safeExecute(() => {
+                // Update wallet
+                currentUser.wallet += currentPaymentAmount;
+                currentUser.points += Math.floor(currentPaymentAmount / 10);
+                
+                // Create transaction
+                const txnId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
+                const transaction = {
+                    id: txnId,
+                    type: 'credit',
+                    amount: currentPaymentAmount,
+                    description: currentPaymentType === 'wallet' ? 'Wallet Recharge' : 'Wallet Recharge (for Order)',
+                    method: selectedPaymentMethod.toUpperCase(),
+                    timestamp: new Date().toISOString()
+                };
+                
+                transactions.push(transaction);
+                safeSetItem('transactions', transactions);
+                safeSetItem('campusconnect_current_user', currentUser);
+
+                // Show success screen
+                document.getElementById('payment-processing').classList.add('hidden');
+                document.getElementById('payment-success').classList.remove('hidden');
+                document.getElementById('txn-id').textContent = txnId;
+                document.getElementById('paid-amount').textContent = `₹${currentPaymentAmount}`;
+
+                // Add notification
+                notifications.unshift({
+                    id: Date.now(),
+                    icon: 'account_balance_wallet',
+                    color: 'green',
+                    title: `Wallet recharged: +₹${currentPaymentAmount}`,
+                    time: 'Just now',
+                    type: 'success'
+                });
+                updateNotificationsList();
+            }, 'Payment completion failed');
+        }
+
+        function closeRazorpaySuccess() {
+            closeRazorpay();
+            showSuccess('Payment successful!');
+            
+            console.log('Payment completed for type:', currentPaymentType, 'Pending checkout:', pendingCheckout);
+            
+            // Reload appropriate page based on payment type
+            if (currentPaymentType === 'wallet') {
+                loadPage('profile');
+            } else if (currentPaymentType === 'canteen' && pendingCheckout) {
+                // After recharging for canteen, process the order with wallet
+                loadPage('canteen');
+                setTimeout(() => {
+                    if (cart.length > 0) {
+                        console.log('Processing canteen order after recharge');
+                        processCanteenOrder();
+                    }
+                }, 500);
+            } else if (currentPaymentType === 'fine') {
+                // After paying fine, go back to library
+                loadPage('library');
+            } else {
+                loadPage('home');
+            }
+            
+            pendingCheckout = false;
+        }
+
+        function processCanteenOrder() {
+            if (cart.length === 0) {
+                showError('Your cart is empty!');
+                return;
+            }
+            
+            safeExecute(() => {
+                const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                
+                if (currentUser.wallet < total) {
+                    showError('Insufficient wallet balance!');
+                    return;
+                }
+
+                // Process payment with wallet
+                currentUser.wallet -= total;
+                currentUser.points += Math.floor(total / 10);
+                
+                const tokenNumber = Math.floor(Math.random() * 100) + 1;
+                const orderId = `ORD-${Date.now()}`;
+                
+                const newOrder = {
+                    id: orderId,
+                    token: tokenNumber,
+                    items: [...cart],
+                    total,
+                    status: 'preparing',
+                    timestamp: new Date().toISOString(),
+                    counter: 3
+                };
+                
+                orders.push(newOrder);
+                safeSetItem('orders', orders);
+                
+                const transaction = {
+                    id: `TXN-${Date.now()}`,
+                    type: 'debit',
+                    amount: total,
+                    description: 'Canteen Order (Razorpay)',
+                    timestamp: new Date().toISOString()
+                };
+                transactions.push(transaction);
+                safeSetItem('transactions', transactions);
+                safeSetItem('campusconnect_current_user', currentUser);
+                
+                // Clear cart
+                cart = [];
+                safeSetItem('campusconnect_cart', cart);
+                
+                // Show success
+                showSuccess('Order placed successfully!');
+                
+                // Reload canteen page
+                loadPage('canteen');
+                
+                setTimeout(() => updateOrderStatus(orderId, 'ready'), 5000);
+                
+                // Show order tracking modal
+                setTimeout(() => showOrderTracking(newOrder), 300);
+            }, 'Order processing failed');
+        }
+
+        // ========== AI MEAL ADVISOR ==========
+        async function getAIMealSuggestions(mealName) {
+            const modal = document.getElementById('ai-modal');
+            const resultDiv = document.getElementById('ai-result');
+            
+            modal.style.display = 'flex';
+            resultDiv.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <span class="material-symbols-rounded text-5xl text-blue-500 animate-spin">progress_activity</span>
+                </div>
+                <p class="text-center text-gray-600">Analyzing ${mealName} and generating healthy alternatives...</p>
+            `;
+
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1500,
+                        messages: [{
+                            role: "user",
+                            content: `As a nutrition expert for college students, analyze "${mealName}" and provide:
+                            
+1. Quick nutritional overview (calories, protein, carbs)
+2. Three healthier alternatives that are:
+   - Easy to make in a hostel/campus
+   - Budget-friendly
+   - Similar taste profile
+3. Simple modifications to make the original meal healthier
+
+Format your response in a clear, student-friendly way with emojis. Keep it concise and practical.`
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const text = data.content?.[0]?.text || 'No response received';
+                
+                resultDiv.innerHTML = `
+                    <div class="prose max-w-none">
+                        <div class="bg-gradient-to-r from-blue-50 to-teal-50 p-4 rounded-lg mb-4">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center">
+                                <span class="material-symbols-rounded mr-2 text-teal-500">restaurant_menu</span>
+                                Meal Analysis: ${mealName}
+                            </h4>
+                        </div>
+                        <div class="text-gray-700 leading-relaxed whitespace-pre-wrap">${text}</div>
+                    </div>
+                    <button onclick="closeAiModal()" class="w-full mt-6 py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-lg hover:opacity-90">
+                        Got It!
+                    </button>
+                `;
+            } catch (error) {
+                console.error('AI API error:', error);
+                resultDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                        <span class="material-symbols-rounded align-middle mr-2">error</span>
+                        Unable to connect to AI advisor. Please check your connection and try again.
+                    </div>
+                    <button onclick="closeAiModal()" class="w-full mt-4 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg">
+                        Close
+                    </button>
+                `;
+            }
+        }
+
+        function closeAiModal() {
+            document.getElementById('ai-modal').style.display = 'none';
+        }
+
+        // ========== CART & CHECKOUT ==========
+        function addToCart(itemIdOrObject) {
+            // Handle both ID (number) and object inputs for backward compatibility
+            let item;
+            if (typeof itemIdOrObject === 'number') {
+                item = MENU_ITEMS[itemIdOrObject];
+                if (!item) {
+                    showError('Item not found');
+                    return;
+                }
+            } else if (typeof itemIdOrObject === 'object' && itemIdOrObject !== null) {
+                item = itemIdOrObject;
+            } else {
+                showError('Invalid item');
+                return;
+            }
+
+            safeExecute(() => {
+                const existingItem = cart.find(i => i.id === item.id);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    cart.push({ ...item, quantity: 1 });
+                }
+                
+                if (item.veg) {
+                    ecoChoices++;
+                    sustainabilityScore = Math.min(100, sustainabilityScore + 1);
+                }
+                
+                if (safeSetItem('campusconnect_cart', cart)) {
+                    showSuccess(`${item.name} added to cart!`);
+                    // Reload page to show updated cart
+                    loadPage('canteen');
+                }
+            }, 'Failed to add item to cart');
+        }
+
+        function removeFromCart(itemId) {
+            safeExecute(() => {
+                const itemIndex = cart.findIndex(i => i.id === itemId);
+                if (itemIndex > -1) {
+                    if (cart[itemIndex].quantity > 1) {
+                        cart[itemIndex].quantity--;
+                    } else {
+                        cart.splice(itemIndex, 1);
+                    }
+                }
+                safeSetItem('campusconnect_cart', cart);
+                loadPage('canteen');
+            }, 'Failed to remove item');
+        }
+
+        function checkout() {
+            console.log('Checkout clicked, cart:', cart);
+            
+            if (cart.length === 0) {
+                showError('Your cart is empty!');
+                return;
+            }
+            
+            safeExecute(() => {
+                const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                console.log('Cart total:', total);
+                
+                currentPaymentAmount = total;
+                currentPaymentType = 'canteen';
+                
+                // Show payment method selection modal
+                showPaymentMethodModal(total);
+            }, 'Checkout failed');
+        }
+
+        function showPaymentMethodModal(amount) {
+            console.log('Showing payment method modal for amount:', amount);
+            
+            const modal = document.getElementById('payment-method-modal');
+            
+            if (!modal) {
+                console.error('Payment method modal not found in DOM');
+                showError('Payment modal not found. Please refresh the page.');
+                return;
+            }
+            
+            const amountEl = document.getElementById('payment-method-amount');
+            const balanceEl = document.getElementById('wallet-balance-display');
+            
+            if (!amountEl || !balanceEl) {
+                console.error('Payment modal elements not found');
+                showError('Payment modal elements not found. Please refresh.');
+                return;
+            }
+            
+            amountEl.textContent = `₹${amount}`;
+            balanceEl.textContent = `₹${currentUser?.wallet || 0}`;
+            
+            // Disable wallet option if insufficient balance
+            const walletBtn = document.getElementById('wallet-payment-btn');
+            if (!walletBtn) {
+                console.error('Wallet button not found');
+                showError('Wallet button not found. Please refresh.');
+                return;
+            }
+            
+            const walletBalanceSpan = walletBtn.querySelector('.text-sm');
+            
+            if ((currentUser?.wallet || 0) < amount) {
+                walletBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                walletBtn.disabled = true;
+                if (walletBalanceSpan) {
+                    walletBalanceSpan.innerHTML = `Balance: <span class="font-semibold text-red-600">₹${currentUser?.wallet || 0} (Insufficient)</span>`;
+                }
+            } else {
+                walletBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                walletBtn.disabled = false;
+                if (walletBalanceSpan) {
+                    walletBalanceSpan.innerHTML = `Balance: <span class="font-semibold text-green-600">₹${currentUser?.wallet || 0}</span>`;
+                }
+            }
+            
+            modal.style.display = 'flex';
+            console.log('Payment method modal displayed');
+        }
+
+        function closePaymentMethodModal() {
+            const modal = document.getElementById('payment-method-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function payWithWallet() {
+            console.log('Pay with wallet clicked');
+            
+            if (cart.length === 0) {
+                showError('Your cart is empty!');
+                closePaymentMethodModal();
+                return;
+            }
+            
+            safeExecute(() => {
+                const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                
+                if (currentUser.wallet < total) {
+                    showError('Insufficient wallet balance!');
+                    return;
+                }
+
+                // Process payment with wallet
+                currentUser.wallet -= total;
+                currentUser.points += Math.floor(total / 10);
+                
+                const tokenNumber = Math.floor(Math.random() * 100) + 1;
+                const orderId = `ORD-${Date.now()}`;
+                
+                const newOrder = {
+                    id: orderId,
+                    token: tokenNumber,
+                    items: [...cart],
+                    total,
+                    status: 'preparing',
+                    timestamp: new Date().toISOString(),
+                    counter: 3
+                };
+                
+                orders.push(newOrder);
+                safeSetItem('orders', orders);
+                
+                const transaction = {
+                    id: `TXN-${Date.now()}`,
+                    type: 'debit',
+                    amount: total,
+                    description: 'Canteen Order (Wallet)',
+                    timestamp: new Date().toISOString()
+                };
+                transactions.push(transaction);
+                safeSetItem('transactions', transactions);
+                safeSetItem('campusconnect_current_user', currentUser);
+                
+                // Clear cart
+                cart = [];
+                safeSetItem('campusconnect_cart', cart);
+                
+                // Close payment modal
+                closePaymentMethodModal();
+                
+                // Show success
+                showSuccess('Order placed successfully with Wallet!');
+                
+                // Reload canteen page
+                loadPage('canteen');
+                
+                setTimeout(() => updateOrderStatus(orderId, 'ready'), 5000);
+                
+                // Show order tracking modal
+                setTimeout(() => showOrderTracking(newOrder), 300);
+            }, 'Wallet payment failed');
+        }
+
+        function payWithRazorpay() {
+            console.log('Pay with Razorpay clicked');
+            closePaymentMethodModal();
+            pendingCheckout = true;
+            openRazorpay(currentPaymentAmount, 'canteen');
+        }
+
+        function updateOrderStatus(orderId, status) {
+            safeExecute(() => {
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    order.status = status;
+                    safeSetItem('orders', orders);
+                    
+                    if (status === 'ready') {
+                        notifications.unshift({
+                            id: Date.now(),
+                            icon: 'check_circle',
+                            color: 'green',
+                            title: `Order #${order.token} is ready for pickup!`,
+                            time: 'Just now',
+                            type: 'success'
+                        });
+                        updateNotificationsList();
+                        
+                        // Reload canteen page if we're on it
+                        const currentPage = document.querySelector('.nav-item.text-blue-500')?.getAttribute('data-page');
+                        if (currentPage === 'canteen') {
+                            loadPage('canteen');
+                        }
+                    }
+                    
+                    if (status === 'completed') {
+                        // Reload page to remove the "Order Ready" banner
+                        const currentPage = document.querySelector('.nav-item.text-blue-500')?.getAttribute('data-page');
+                        if (currentPage === 'canteen') {
+                            loadPage('canteen');
+                        }
+                    }
+                }
+            }, 'Failed to update order status');
+        }
+
+        function showOrderTracking(order) {
+            const modal = document.getElementById('order-modal');
+            const content = document.getElementById('order-tracking-content');
+            
+            content.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <span class="text-4xl font-black text-white">#${order.token}</span>
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h4>
+                    <p class="text-gray-600">Order ID: ${order.id}</p>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h5 class="font-semibold text-gray-800 mb-2">Order Summary</h5>
+                    ${order.items.map(item => `
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>${item.name} x${item.quantity}</span>
+                            <span class="font-semibold">₹${item.price * item.quantity}</span>
+                        </div>
+                    `).join('')}
+                    <div class="border-t border-blue-300 mt-2 pt-2 flex justify-between font-bold">
+                        <span>Total</span>
+                        <span>₹${order.total}</span>
+                    </div>
+                </div>
+                
+                <button onclick="closeOrderModal()" class="w-full py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-lg hover:opacity-90">
+                    Close
+                </button>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeOrderModal() {
+            document.getElementById('order-modal').style.display = 'none';
+            // Reload current page to reflect any updates
+            const currentPage = document.querySelector('.nav-item.text-blue-500')?.getAttribute('data-page') || 'home';
+            loadPage(currentPage);
+        }
+
+        // ========== WALLET ==========
+        function addMoney() {
+            const amount = prompt('Enter amount to add to wallet (₹):');
+            if (amount && !isNaN(amount) && parseInt(amount) > 0) {
+                currentPaymentAmount = parseInt(amount);
+                currentPaymentType = 'wallet';
+                pendingCheckout = false;
+                openRazorpay(parseInt(amount), 'wallet');
+            } else if (amount !== null) {
+                showError('Please enter a valid amount');
+            }
+        }
+
+        function showTransactions() {
+            const modal = document.getElementById('order-modal');
+            const content = document.getElementById('order-tracking-content');
+            
+            if (transactions.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <span class="material-symbols-rounded text-6xl text-gray-400 mb-4">receipt_long</span>
+                        <p class="text-gray-600">No transactions yet</p>
+                    </div>
+                    <button onclick="closeOrderModal()" class="w-full mt-4 py-2 bg-blue-500 text-white font-semibold rounded-lg">Close</button>
+                `;
+            } else {
+                content.innerHTML = `
+                    <h4 class="font-bold text-gray-800 mb-4">Transaction History</h4>
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        ${transactions.slice().reverse().map(txn => `
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <span class="material-symbols-rounded mr-3 ${txn.type === 'credit' ? 'text-green-500' : 'text-red-500'}">
+                                        ${txn.type === 'credit' ? 'add_circle' : 'remove_circle'}
+                                    </span>
+                                    <div>
+                                        <p class="font-semibold text-gray-800">${txn.description}</p>
+                                        <p class="text-xs text-gray-600">${new Date(txn.timestamp).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <span class="font-bold ${txn.type === 'credit' ? 'text-green-600' : 'text-red-600'}">
+                                    ${txn.type === 'credit' ? '+' : '-'}₹${txn.amount}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="closeOrderModal()" class="w-full mt-4 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
+                        Close
+                    </button>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // ========== LIBRARY ==========
+        function borrowBook(bookId) {
+            console.log('Borrowing book:', bookId);
+            safeExecute(() => {
+                const book = availableBooks.find(b => b.id === bookId);
+                if (!book) {
+                    showError('Book not found');
+                    return;
+                }
+                
+                if (!book.available) {
+                    showError('Book is not available');
+                    return;
+                }
+                
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 14);
+                
+                borrowedBooks.push({
+                    id: Date.now(),
+                    title: book.title,
+                    author: book.author,
+                    dueDate: dueDate.toISOString().split('T')[0],
+                    fine: 0
+                });
+                
+                book.available = false;
+                safeSetItem('borrowed_books', borrowedBooks);
+                
+                currentUser.points += 10;
+                safeSetItem('campusconnect_current_user', currentUser);
+                
+                showSuccess(`"${book.title}" borrowed successfully! Due: ${dueDate.toLocaleDateString()}`);
+                loadPage('library');
+            }, 'Failed to borrow book');
+        }
+
+        function returnBook(bookId) {
+            console.log('Returning book:', bookId);
+            safeExecute(() => {
+                const index = borrowedBooks.findIndex(b => b.id === bookId);
+                if (index === -1) {
+                    showError('Book not found in borrowed list');
+                    return;
+                }
+                
+                const book = borrowedBooks[index];
+                
+                // Calculate fine if overdue
+                const dueDate = new Date(book.dueDate);
+                const today = new Date();
+                const daysOverdue = Math.max(0, Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24)));
+                const fine = daysOverdue * 5;
+                
+                if (fine > 0) {
+                    if (currentUser.wallet < fine) {
+                        if (confirm(`You have a fine of ₹${fine}. Insufficient balance! Would you like to recharge wallet?`)) {
+                            currentPaymentAmount = fine;
+                            currentPaymentType = 'fine';
+                            pendingCheckout = false;
+                            openRazorpay(fine, 'fine');
+                        }
+                        return;
+                    }
+                    currentUser.wallet -= fine;
+                    
+                    // Add transaction for fine payment
+                    const transaction = {
+                        id: `TXN-${Date.now()}`,
+                        type: 'debit',
+                        amount: fine,
+                        description: `Library Fine - ${book.title}`,
+                        timestamp: new Date().toISOString()
+                    };
+                    transactions.push(transaction);
+                    safeSetItem('transactions', transactions);
+                    
+                    safeSetItem('campusconnect_current_user', currentUser);
+                }
+                
+                borrowedBooks.splice(index, 1);
+                safeSetItem('borrowed_books', borrowedBooks);
+                
+                const availBook = availableBooks.find(b => b.title === book.title);
+                if (availBook) availBook.available = true;
+                
+                showSuccess(`"${book.title}" returned successfully!${fine > 0 ? ` Fine paid: ₹${fine}` : ''}`);
+                loadPage('library');
+            }, 'Failed to return book');
+        }
+
+        function searchBooks(query) {
+            safeExecute(() => {
+                const filtered = availableBooks.filter(book => 
+                    book.title.toLowerCase().includes(query.toLowerCase()) ||
+                    book.author.toLowerCase().includes(query.toLowerCase()) ||
+                    book.category.toLowerCase().includes(query.toLowerCase())
+                );
+                displayBooks(filtered);
+            }, 'Search failed');
+        }
+
+        function displayBooks(books) {
+            const container = document.getElementById('books-grid');
+            if (!container) return;
+            
+            if (books.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 text-center py-8">
+                        <span class="material-symbols-rounded text-6xl text-gray-400 mb-4">search_off</span>
+                        <p class="text-gray-600">No books found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = books.map(book => `
+                <div class="book-card bg-white p-3 rounded-xl shadow-lg border border-gray-200">
+                    <div class="w-full h-36 bg-gradient-to-br ${book.available ? 'from-blue-100 to-blue-200' : 'from-gray-100 to-gray-200'} rounded-lg mb-2 flex items-center justify-center">
+                        <span class="material-symbols-rounded text-5xl ${book.available ? 'text-blue-600' : 'text-gray-400'}">menu_book</span>
+                    </div>
+                    <p class="text-sm font-semibold truncate">${book.title}</p>
+                    <p class="text-xs text-gray-600 truncate mb-1">${book.author}</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs ${book.available ? 'text-green-600' : 'text-gray-500'} font-medium">
+                            ${book.available ? '● Available' : '● Not Available'}
+                        </span>
+                        <span class="text-xs text-yellow-600">★ ${book.rating}</span>
+                    </div>
+                    <button onclick="borrowBook(${book.id})" ${!book.available ? 'disabled' : ''} 
+                            class="w-full py-1 text-xs font-semibold ${book.available ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} rounded-md transition-colors">
+                        ${book.available ? 'Borrow' : 'Unavailable'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // ========== NOTIFICATIONS ==========
+        function updateNotificationsList() {
+            const list = document.getElementById('notifications-list');
+            
+            if (notifications.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-8">
+                        <span class="material-symbols-rounded text-6xl text-gray-400 mb-4">notifications_off</span>
+                        <p class="text-gray-600">No notifications</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = notifications.map(n => {
+                const bgClass = n.type === 'success' ? 'bg-green-50 border-l-4 border-green-500' : 
+                               n.type === 'warning' ? 'bg-yellow-50 border-l-4 border-yellow-500' : 
+                               'bg-blue-50 border-l-4 border-blue-500';
+                
+                return `
+                    <div class="flex items-start p-3 ${bgClass} rounded-lg fade-in">
+                        <span class="material-symbols-rounded mr-3 mt-1 text-${n.color}-600">${n.icon}</span>
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800">${n.title}</p>
+                            <p class="text-xs text-gray-600">${n.time}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleNotifications() {
+            const center = document.getElementById('notification-center');
+            const overlay = document.getElementById('notification-center-overlay');
+            
+            if (center.classList.contains('translate-x-full')) {
+                center.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                center.classList.add('translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // ========== PAGE CONTENT ==========
+        function getHomeContent() {
+            const activeOrders = orders.filter(o => o.status !== 'completed');
+            
+            return `
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800">Good ${getGreeting()}, ${currentUser?.name?.split(' ')[0] || 'User'}! 👋</h2>
+
+                <section class="mb-8">
+                    <h3 class="flex items-center text-lg font-bold text-gray-800 mb-3">
+                        <span class="material-symbols-rounded mr-2 text-2xl text-blue-500">analytics</span> Quick Stats
+                    </h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-4 text-center rounded-xl shadow-md border-l-4 border-blue-500">
+                            <p class="text-3xl font-extrabold text-blue-600">${borrowedBooks.length}</p>
+                            <p class="text-sm text-gray-600">Books</p>
+                        </div>
+                        <div class="bg-white p-4 text-center rounded-xl shadow-md border-l-4 border-teal-500">
+                            <p class="text-3xl font-extrabold text-teal-600">${activeOrders.length}</p>
+                            <p class="text-sm text-gray-600">Orders</p>
+                        </div>
+                        <div class="bg-white p-4 text-center rounded-xl shadow-md border-l-4 border-orange-500">
+                            <p class="text-3xl font-extrabold text-orange-600">${currentUser?.points || 0}</p>
+                            <p class="text-sm text-gray-600">Points</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-8 p-4 bg-white rounded-xl shadow-md">
+                    <h3 class="flex items-center text-lg font-bold text-gray-800 mb-4">
+                        <span class="material-symbols-rounded mr-2 text-2xl text-blue-500">bolt</span> Quick Actions
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="loadPage('library')" class="p-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md hover:opacity-90 transition-all">
+                            <span class="material-symbols-rounded block mb-1" style="font-size: 32px;">menu_book</span>
+                            Browse Books
+                        </button>
+                        <button onclick="loadPage('canteen')" class="p-3 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg shadow-md hover:opacity-90 transition-all">
+                            <span class="material-symbols-rounded block mb-1" style="font-size: 32px;">restaurant</span>
+                            Order Food
+                        </button>
+                        <button onclick="openQrModal()" class="p-3 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-md hover:opacity-90 transition-all">
+                            <span class="material-symbols-rounded block mb-1" style="font-size: 32px;">qr_code_scanner</span>
+                            Scan QR
+                        </button>
+                        <button onclick="addMoney()" class="p-3 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-md hover:opacity-90 transition-all">
+                            <span class="material-symbols-rounded block mb-1" style="font-size: 32px;">add_card</span>
+                            Add Money
+                        </button>
+                    </div>
+                </section>
+
+                ${borrowedBooks.length > 0 ? `
+                    <section class="mb-8">
+                        <h3 class="flex items-center text-lg font-bold text-gray-800 mb-3">
+                            <span class="material-symbols-rounded mr-2 text-2xl text-red-500">schedule</span> Upcoming Due Dates
+                        </h3>
+                        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-red-500">
+                            <ul class="space-y-2 text-sm">
+                                ${borrowedBooks.slice(0, 2).map(book => `
+                                    <li class="flex items-start">
+                                        <span class="material-symbols-rounded text-red-500 mr-2 text-lg">error</span>
+                                        <div>
+                                            <p class="font-semibold">${book.title}</p>
+                                            <p class="text-gray-600">Due: ${new Date(book.dueDate).toLocaleDateString()}</p>
+                                        </div>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </section>
+                ` : ''}
+
+                <section class="mt-8 p-6 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-green-300 rounded-xl shadow-inner">
+                    <h3 class="flex items-center justify-center text-lg font-bold text-gray-800 mb-4">
+                        <span class="material-symbols-rounded mr-2 text-3xl text-green-600">eco</span> 
+                        Your Eco Score
+                    </h3>
+                    <div class="text-center">
+                        <div class="relative inline-block">
+                            <svg class="transform -rotate-90" width="120" height="120">
+                                <circle cx="60" cy="60" r="45" stroke="#E5E7EB" stroke-width="10" fill="none" />
+                                <circle cx="60" cy="60" r="45" stroke="#10B981" stroke-width="10" fill="none" 
+                                        stroke-dasharray="283" stroke-dashoffset="${283 - (283 * sustainabilityScore / 100)}" />
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-3xl font-bold text-green-600">${sustainabilityScore}%</span>
+                            </div>
+                        </div>
+                        <p class="mt-4 text-sm text-gray-700">
+                            <span class="font-semibold text-green-600">${ecoChoices}</span> sustainable choices made! 🌱
+                        </p>
+                    </div>
+                </section>
+            `;
+        }
+
+        function getLibraryContent() {
+            return `
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <span class="material-symbols-rounded mr-2 text-3xl text-blue-500">local_library</span>
+                        Library
+                    </h2>
+                </div>
+
+                <div class="mb-4">
+                    <div class="relative">
+                        <input type="text" id="book-search" onkeyup="handleBookSearch()" 
+                               class="w-full py-3 pl-12 pr-4 rounded-full border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all search-input" 
+                               placeholder="Search books by title, author, or category...">
+                        <span class="material-symbols-rounded absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
+                    </div>
+                </div>
+
+                ${borrowedBooks.length > 0 ? `
+                    <div class="mb-8">
+                        <h3 class="flex items-center text-lg font-bold text-gray-800 mb-3">
+                            <span class="material-symbols-rounded mr-2 text-2xl text-blue-500">book</span> 
+                            My Borrowed Books (${borrowedBooks.length})
+                        </h3>
+                        <div class="space-y-3">
+                            ${borrowedBooks.map(book => {
+                                const daysLeft = Math.ceil((new Date(book.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+                                const isOverdue = daysLeft < 0;
+                                
+                                return `
+                                    <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${isOverdue ? 'border-red-500' : 'border-blue-500'}">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <p class="font-semibold text-gray-800">${book.title}</p>
+                                                <p class="text-sm text-gray-600">${book.author}</p>
+                                            </div>
+                                            <button onclick="returnBook(${book.id})" class="text-sm text-blue-500 hover:text-blue-700 font-semibold">
+                                                Return
+                                            </button>
+                                        </div>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}">
+                                                ${isOverdue ? `Overdue by ${Math.abs(daysLeft)} days` : `Due in ${daysLeft} days`}
+                                            </span>
+                                            ${isOverdue ? `<span class="text-red-600 font-semibold">Fine: ₹${Math.abs(daysLeft) * 5}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <h3 class="flex items-center text-lg font-bold text-gray-800 mb-3">
+                    <span class="material-symbols-rounded mr-2 text-2xl text-orange-500">local_fire_department</span> 
+                    Available Books
+                </h3>
+                <div id="books-grid" class="grid grid-cols-2 gap-4"></div>
+            `;
+        }
+
+        function getCanteenContent() {
+            const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const activeOrder = orders.find(o => o.status === 'ready');
+
+            // Use the global MENU_ITEMS object
+            const menuItems = Object.values(MENU_ITEMS);
+
+            return `
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <span class="material-symbols-rounded mr-2 text-3xl text-orange-500">restaurant</span>
+                        Canteen
+                    </h2>
+                    <div class="relative">
+                        <span class="material-symbols-rounded text-2xl text-gray-700">shopping_cart</span>
+                        ${cartCount > 0 ? `<span class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">${cartCount}</span>` : ''}
+                    </div>
+                </div>
+
+                ${activeOrder ? `
+                    <div class="mb-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-500 rounded-xl shadow-lg fade-in">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-gray-800 flex items-center">
+                                <span class="material-symbols-rounded mr-2 text-green-600">check_circle</span>
+                                Order Ready!
+                            </h3>
+                            <span class="text-3xl font-black text-green-600">#${activeOrder.token}</span>
+                        </div>
+                        <p class="text-sm text-gray-700">Please collect from <span class="font-semibold">Counter ${activeOrder.counter}</span></p>
+                        <button onclick="updateOrderStatus('${activeOrder.id}', 'completed'); loadPage('canteen')" 
+                                class="mt-3 w-full py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700">
+                            Mark as Collected
+                        </button>
+                    </div>
+                ` : ''}
+
+                ${cart.length > 0 ? `
+                    <div class="mb-6 p-4 bg-white rounded-xl shadow-md border-2 border-blue-300">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                            <span class="material-symbols-rounded mr-2 text-blue-500">shopping_basket</span>
+                            Your Cart
+                        </h3>
+                        <div class="space-y-2 mb-3">
+                            ${cart.map(item => `
+                                <div class="flex justify-between items-center">
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-gray-800">${item.name}</p>
+                                        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity}</p>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <button onclick="removeFromCart(${item.id})" class="w-6 h-6 bg-red-100 text-red-600 rounded-full hover:bg-red-200 flex items-center justify-center">
+                                            <span class="material-symbols-rounded text-sm">remove</span>
+                                        </button>
+                                        <span class="font-semibold w-8 text-center">${item.quantity}</span>
+                                        <button onclick="addToCart(${item.id})" class="w-6 h-6 bg-green-100 text-green-600 rounded-full hover:bg-green-200 flex items-center justify-center">
+                                            <span class="material-symbols-rounded text-sm">add</span>
+                                        </button>
+                                        <span class="font-bold text-gray-800 ml-2 w-16 text-right">₹${item.price * item.quantity}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="border-t-2 border-blue-200 pt-3 flex justify-between items-center font-bold text-lg mb-3">
+                            <span>Total:</span>
+                            <span class="text-blue-600">₹${cartTotal}</span>
+                        </div>
+                        <button onclick="checkout()" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:opacity-90 shadow-md">
+                            <span class="material-symbols-rounded align-middle mr-2">check_circle</span>
+                            Checkout
+                        </button>
+                    </div>
+                ` : ''}
+
+                <h3 class="flex items-center text-lg font-bold text-gray-800 mb-3">
+                    <span class="material-symbols-rounded mr-2 text-2xl text-orange-500">restaurant_menu</span> 
+                    Today's Menu
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    ${menuItems.map(item => `
+                        <div class="bg-white p-3 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-all">
+                            <div class="text-5xl text-center mb-2">${item.emoji}</div>
+                            <p class="text-sm font-semibold text-center truncate">${item.name}</p>
+                            <div class="flex justify-between items-center text-xs text-gray-600 my-1">
+                                <span>${item.calories} cal</span>
+                                <span>${item.protein}g protein</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-lg font-bold text-teal-600">₹${item.price}</span>
+                                ${item.veg ? '<span class="text-xs text-green-600 font-semibold">🌱 Veg</span>' : ''}
+                            </div>
+                            <div class="flex space-x-1">
+                                <button onclick="addToCart(${item.id})" 
+                                        class="flex-1 py-2 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-md hover:opacity-90 transition-all">
+                                    <span class="material-symbols-rounded align-middle text-sm">add_shopping_cart</span>
+                                </button>
+                                <button onclick="getAIMealSuggestions('${item.name}')" 
+                                        class="w-10 py-2 text-xs font-semibold text-white bg-gradient-to-r from-teal-500 to-teal-600 rounded-md hover:opacity-90 transition-all">
+                                    <span class="material-symbols-rounded text-sm">psychology</span>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function getProfileContent() {
+            return `
+                <div class="text-center mb-8">
+                    <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full mx-auto mb-4 flex items-center justify-center text-5xl text-white font-black shadow-lg">
+                        ${currentUser?.name?.charAt(0) || 'U'}
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800">${currentUser?.name || 'User'}</h2>
+                    <p class="text-sm text-gray-600">Roll: ${currentUser?.roll || 'N/A'}</p>
+                    <p class="text-sm text-gray-600 flex items-center justify-center mt-1">
+                        <span class="material-symbols-rounded mr-1 text-sm">mail</span> ${currentUser?.email || 'N/A'}
+                    </p>
+                    <p class="text-sm text-gray-600 flex items-center justify-center mt-1">
+                        <span class="material-symbols-rounded mr-1 text-sm">apartment</span> ${currentUser?.campus || 'Main Campus'}
+                    </p>
+                </div>
+
+                <div class="bg-gradient-to-r from-blue-500 to-teal-400 p-6 rounded-xl shadow-lg text-white mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <p class="text-sm opacity-90">Wallet Balance</p>
+                            <h3 class="text-4xl font-bold">₹${currentUser?.wallet || 0}</h3>
+                        </div>
+                        <span class="material-symbols-rounded text-5xl">account_balance_wallet</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="addMoney()" class="flex-1 py-2 bg-white bg-opacity-20 backdrop-blur-sm hover:bg-opacity-30 rounded-lg font-semibold transition-all">
+                            <span class="material-symbols-rounded align-middle mr-1 text-sm">add</span> Add Money
+                        </button>
+                        <button onclick="showTransactions()" class="flex-1 py-2 bg-white bg-opacity-20 backdrop-blur-sm hover:bg-opacity-30 rounded-lg font-semibold transition-all">
+                            <span class="material-symbols-rounded align-middle mr-1 text-sm">receipt_long</span> History
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-400 to-orange-600 p-6 rounded-xl shadow-lg text-white mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <p class="text-sm opacity-90">Reward Points</p>
+                            <h3 class="text-4xl font-bold">${currentUser?.points || 0}</h3>
+                        </div>
+                        <span class="material-symbols-rounded text-5xl">workspace_premium</span>
+                    </div>
+                    <p class="text-sm">Level ${Math.floor((currentUser?.points || 0) / 200) + 1} - Campus ${(currentUser?.points || 0) > 1000 ? 'Legend' : (currentUser?.points || 0) > 500 ? 'Champion' : 'Explorer'} 🏆</p>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="showSustainabilityDashboard()" class="w-full flex items-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all">
+                        <span class="material-symbols-rounded mr-3 text-2xl text-green-500">eco</span>
+                        <span class="font-semibold text-gray-800">Sustainability Dashboard</span>
+                    </button>
+                    
+                    <button onclick="handleLogout()" class="w-full flex items-center p-4 bg-red-50 rounded-xl shadow-md hover:shadow-lg transition-all border-2 border-red-200">
+                        <span class="material-symbols-rounded mr-3 text-2xl text-red-500">logout</span>
+                        <span class="font-semibold text-red-600">Logout</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function showSustainabilityDashboard() {
+            const modal = document.getElementById('order-modal');
+            const content = document.getElementById('order-tracking-content');
+            
+            content.innerHTML = `
+                <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+                    <span class="material-symbols-rounded mr-2 text-green-500 text-2xl">eco</span>
+                    Sustainability Dashboard
+                </h4>
+                
+                <div class="text-center mb-6">
+                    <div class="relative inline-block mb-4">
+                        <svg class="transform -rotate-90" width="140" height="140">
+                            <circle cx="70" cy="70" r="55" stroke="#E5E7EB" stroke-width="12" fill="none" />
+                            <circle cx="70" cy="70" r="55" stroke="#10B981" stroke-width="12" fill="none" 
+                                    stroke-dasharray="345" stroke-dashoffset="${345 - (345 * sustainabilityScore / 100)}" 
+                                    stroke-linecap="round" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-4xl font-bold text-green-600">${sustainabilityScore}%</span>
+                            <span class="text-xs text-gray-600">Eco Score</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-gray-800">Sustainable Meals</span>
+                            <span class="text-green-600 font-bold">${ecoChoices}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1">Vegetarian choices made</p>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-gray-800">Books Returned On Time</span>
+                            <span class="text-blue-600 font-bold">${borrowedBooks.length}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1">Helping resource sustainability</p>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-gray-800">Digital Transactions</span>
+                            <span class="text-purple-600 font-bold">${transactions.length}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1">Paperless payments</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 p-4 bg-gradient-to-r from-green-400 to-teal-400 rounded-lg text-white text-center">
+                    <p class="font-semibold mb-2">🌍 Environmental Impact</p>
+                    <p class="text-2xl font-bold mb-1">${(ecoChoices * 0.8).toFixed(1)} kg</p>
+                    <p class="text-sm opacity-90">CO₂ emissions saved</p>
+                </div>
+                
+                <button onclick="closeOrderModal()" class="w-full mt-4 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600">
+                    Close
+                </button>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        function handleBookSearch() {
+            safeExecute(() => {
+                const query = document.getElementById('book-search')?.value || '';
+                searchBooks(query);
+            }, 'Search failed');
+        }
+
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Morning';
+            if (hour < 17) return 'Afternoon';
+            return 'Evening';
+        }
+
+        // ========== NAVIGATION ==========
+        function loadPage(pageName) {
+            console.log('Loading page:', pageName);
+            
+            safeExecute(() => {
+                const pages = {
+                    home: getHomeContent(),
+                    library: getLibraryContent(),
+                    canteen: getCanteenContent(),
+                    profile: getProfileContent()
+                };
+
+                const content = pages[pageName];
+                if (content) {
+                    const mainContentEl = document.getElementById('main-content');
+                    if (!mainContentEl) {
+                        showError('Main content area not found');
+                        return;
+                    }
+                    
+                    mainContentEl.innerHTML = content;
+
+                    document.querySelectorAll('.nav-item').forEach(item => {
+                        if (item.getAttribute('data-page') === pageName) {
+                            item.classList.remove('text-gray-600');
+                            item.classList.add('text-blue-500');
+                        } else {
+                            item.classList.remove('text-blue-500');
+                            item.classList.add('text-gray-600');
+                        }
+                    });
+
+                    if (pageName === 'library') {
+                        displayBooks(availableBooks);
+                    }
+                    
+                    console.log('Page loaded successfully:', pageName);
+                } else {
+                    showError('Page not found: ' + pageName);
+                }
+            }, 'Failed to load page');
+        }
+
+        // ========== EVENT LISTENERS ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded - Setting up event listeners...');
+            
+            safeExecute(() => {
+                const savedUser = safeGetItem('campusconnect_current_user');
+                if (savedUser) {
+                    currentUser = savedUser;
+                    showMainApp();
+                }
+
+                // Navigation listeners
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const page = item.getAttribute('data-page');
+                        console.log('Navigation clicked:', page);
+                        loadPage(page);
+                    });
+                });
+
+                // Notification listeners
+                const notificationBtn = document.getElementById('notification-button');
+                const closeNotifBtn = document.getElementById('close-notifications');
+                const notifOverlay = document.getElementById('notification-center-overlay');
+                
+                if (notificationBtn) {
+                    notificationBtn.addEventListener('click', toggleNotifications);
+                    console.log('Notification button listener attached');
+                }
+                if (closeNotifBtn) closeNotifBtn.addEventListener('click', toggleNotifications);
+                if (notifOverlay) notifOverlay.addEventListener('click', toggleNotifications);
+
+                // QR Scanner listeners
+                const fabQr = document.getElementById('fab-qr');
+                const closeQr = document.getElementById('close-qr-scanner');
+                const tabScan = document.getElementById('tab-scan');
+                const tabMyCode = document.getElementById('tab-my-code');
+                
+                if (fabQr) {
+                    fabQr.addEventListener('click', () => {
+                        console.log('FAB QR clicked');
+                        openQrModal();
+                    });
+                    console.log('FAB QR listener attached');
+                } else {
+                    console.error('FAB QR button not found!');
+                }
+                
+                if (closeQr) {
+                    closeQr.addEventListener('click', () => {
+                        console.log('Close QR clicked');
+                        closeQrModal();
+                    });
+                }
+                
+                if (tabScan) {
+                    tabScan.addEventListener('click', () => {
+                        console.log('Scan tab clicked');
+                        switchQrTab('scan');
+                    });
+                }
+                
+                if (tabMyCode) {
+                    tabMyCode.addEventListener('click', () => {
+                        console.log('My Code tab clicked');
+                        switchQrTab('my-code');
+                    });
+                }
+                
+                console.log('All event listeners attached successfully');
+            }, 'Failed to initialize event listeners');
+        });
+
+        // ========== ERROR RECOVERY ==========
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            showError('An unexpected error occurred. Please refresh the page.');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            showError('An unexpected error occurred.');
+        });
+    </script>
+</body>
+</html>
