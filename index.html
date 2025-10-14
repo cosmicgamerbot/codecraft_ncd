@@ -55,6 +55,11 @@
             50% { opacity: 0.5; }
         }
 
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         .animate-slideUp {
             animation: slideUp 0.5s ease-out;
         }
@@ -69,6 +74,10 @@
 
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .animate-bounce {
+            animation: bounce 1s ease-in-out infinite;
         }
 
         .gradient-text {
@@ -140,6 +149,10 @@
             width: 100%;
             max-width: 300px;
             height: auto;
+        }
+
+        .order-ready-glow {
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
         }
     </style>
 </head>
@@ -286,21 +299,44 @@
         <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
             <div class="glass-card p-6 rounded-3xl shadow-2xl max-w-md w-full animate-slideUp">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 id="qr-modal-title" class="text-xl font-bold text-gray-800">QR Code</h3>
-                    <button id="close-qr-scanner" class="p-2 rounded-xl hover:bg-gray-100 transition-all">
+                    <h3 id="qr-modal-title" class="text-xl font-bold text-gray-800">QR Scanner</h3>
+                    <button onclick="closeQrModal()" class="p-2 rounded-xl hover:bg-gray-100 transition-all">
                         <span class="material-symbols-rounded text-gray-600">close</span>
                     </button>
                 </div>
 
                 <div class="flex mb-4 p-1 glass-dark rounded-xl">
-                    <button id="tab-scan" class="flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all">Scan Code</button>
-                    <button id="tab-my-code" class="flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all">My Code</button>
+                    <button id="tab-scan" onclick="switchQrTab('scan')" class="flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all">Scan QR</button>
+                    <button id="tab-my-code" onclick="switchQrTab('my-code')" class="flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all">My QR</button>
                 </div>
 
                 <div id="qr-scan-container" class="w-full">
-                    <div id="qr-reader" class="w-full aspect-square bg-gray-200 rounded-xl overflow-hidden"></div>
-                    <div id="qr-result-status" class="mt-4 p-3 bg-blue-50 text-blue-700 text-sm font-semibold rounded-xl text-center">
-                        Awaiting scan...
+                    <div class="mb-4 text-center">
+                        <p class="text-sm text-gray-600 font-semibold mb-3">Choose scanning method:</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="file" id="qr-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleQrImageUpload(event)">
+                                <div class="p-4 glass-dark rounded-xl hover:bg-white hover:bg-opacity-30 transition-all border-2 border-transparent hover:border-purple-300">
+                                    <span class="material-symbols-rounded text-4xl text-purple-600 block mb-2">photo_camera</span>
+                                    <span class="text-xs font-bold">Camera</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="file" id="qr-upload-input" accept="image/*" class="hidden" onchange="handleQrImageUpload(event)">
+                                <div class="p-4 glass-dark rounded-xl hover:bg-white hover:bg-opacity-30 transition-all border-2 border-transparent hover:border-blue-300">
+                                    <span class="material-symbols-rounded text-4xl text-blue-600 block mb-2">upload_file</span>
+                                    <span class="text-xs font-bold">Upload</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="qr-preview-container" class="hidden mb-4">
+                        <img id="qr-preview" class="w-full rounded-xl border-2 border-gray-300" alt="QR Preview">
+                    </div>
+                    
+                    <div id="qr-result-status" class="p-4 bg-blue-50 text-blue-700 text-sm font-semibold rounded-xl text-center">
+                        📷 Tap Camera to scan or Upload an image
                     </div>
                 </div>
 
@@ -311,221 +347,9 @@
                     <p class="mt-4 text-sm text-gray-600 font-semibold">Show this code for verification</p>
                     <p class="mt-2 text-xs font-bold gradient-text">ID: <span id="display-user-id"></span></p>
                     <button onclick="downloadQR()" class="mt-4 w-full py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
-                        Download QR Code
+                        <span class="material-symbols-rounded align-middle mr-2">download</span>Download QR Code
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Payment Method Modal -->
-        <div id="payment-method-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
-            <div class="glass-card p-6 rounded-3xl shadow-2xl max-w-md w-full animate-slideUp">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800">Payment Method</h3>
-                    <button onclick="closePaymentMethodModal()" class="p-2 rounded-xl hover:bg-gray-100">
-                        <span class="material-symbols-rounded text-gray-600">close</span>
-                    </button>
-                </div>
-
-                <div class="mb-6 text-center p-6 glass-dark rounded-2xl">
-                    <p class="text-sm text-gray-600 mb-2 font-semibold">Amount to Pay</p>
-                    <h2 class="text-5xl font-black gradient-text" id="payment-method-amount">₹0</h2>
-                </div>
-
-                <button onclick="payWithWallet()" id="wallet-payment-btn" class="w-full p-4 mb-4 glass-dark rounded-2xl hover:shadow-lg transition-all">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-14 h-14 btn-primary rounded-2xl flex items-center justify-center mr-4 shadow-md">
-                                <span class="material-symbols-rounded text-white text-2xl">account_balance_wallet</span>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-bold text-gray-800">Campus Wallet</p>
-                                <p class="text-sm text-gray-600">Balance: <span id="wallet-balance-display" class="font-bold">₹0</span></p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                    </div>
-                </button>
-
-                <button onclick="payWithRazorpay()" class="w-full p-4 glass-dark rounded-2xl hover:shadow-lg transition-all">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center mr-4 shadow-md">
-                                <span class="text-white text-2xl font-black">R</span>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-bold text-gray-800">Razorpay</p>
-                                <p class="text-sm text-gray-600">UPI, Cards, Wallets</p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                    </div>
-                </button>
-            </div>
-        </div>
-
-        <!-- Razorpay Modal -->
-        <div id="razorpay-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
-            <div class="glass-card rounded-3xl shadow-2xl max-w-md w-full p-6 animate-slideUp">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                            <span class="text-2xl font-black text-white">R</span>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-lg text-gray-800">Razorpay</h3>
-                            <p class="text-purple-600 text-xs font-semibold">Secure Payment</p>
-                        </div>
-                    </div>
-                    <button onclick="closeRazorpay()" class="p-2 rounded-xl hover:bg-gray-100">
-                        <span class="material-symbols-rounded text-gray-600">close</span>
-                    </button>
-                </div>
-
-                <div class="glass-dark rounded-2xl p-6 mb-4">
-                    <div class="text-center mb-6">
-                        <p class="text-sm text-gray-600 mb-2 font-semibold">Amount to Pay</p>
-                        <h2 class="text-5xl font-black text-gray-800" id="payment-amount">₹0</h2>
-                        <p class="text-xs text-gray-500 mt-2 font-semibold" id="payment-description">Wallet Recharge</p>
-                    </div>
-
-                    <div id="payment-methods">
-                        <h4 class="font-bold text-gray-800 mb-3">Choose Payment Method</h4>
-                        
-                        <button onclick="selectPaymentMethod('upi')" class="w-full p-4 mb-3 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-md transition-all">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-3">
-                                        <span class="material-symbols-rounded text-purple-600">account_balance</span>
-                                    </div>
-                                    <div class="text-left">
-                                        <p class="font-bold text-gray-800">UPI</p>
-                                        <p class="text-xs text-gray-500">Google Pay, PhonePe, Paytm</p>
-                                    </div>
-                                </div>
-                                <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                            </div>
-                        </button>
-
-                        <button onclick="selectPaymentMethod('card')" class="w-full p-4 mb-3 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-md transition-all">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-3">
-                                        <span class="material-symbols-rounded text-blue-600">credit_card</span>
-                                    </div>
-                                    <div class="text-left">
-                                        <p class="font-bold text-gray-800">Debit/Credit Card</p>
-                                        <p class="text-xs text-gray-500">Visa, Mastercard, RuPay</p>
-                                    </div>
-                                </div>
-                                <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                            </div>
-                        </button>
-
-                        <button onclick="selectPaymentMethod('wallet')" class="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-md transition-all">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-3">
-                                        <span class="material-symbols-rounded text-green-600">account_balance_wallet</span>
-                                    </div>
-                                    <div class="text-left">
-                                        <p class="font-bold text-gray-800">Digital Wallet</p>
-                                        <p class="text-xs text-gray-500">Paytm, Amazon Pay</p>
-                                    </div>
-                                </div>
-                                <span class="material-symbols-rounded text-gray-400">chevron_right</span>
-                            </div>
-                        </button>
-                    </div>
-
-                    <div id="payment-details" class="hidden">
-                        <button onclick="showPaymentMethods()" class="text-purple-600 text-sm mb-4 flex items-center hover:underline font-semibold">
-                            <span class="material-symbols-rounded mr-1">arrow_back</span> Change Method
-                        </button>
-                        
-                        <div id="upi-form" class="hidden">
-                            <label class="block text-sm font-bold mb-2 text-gray-700">UPI ID</label>
-                            <input type="text" id="upi-id" placeholder="yourname@paytm" 
-                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl mb-2">
-                            <p class="text-xs text-gray-500 mb-4">Supports all UPI apps</p>
-                        </div>
-
-                        <div id="card-form" class="hidden">
-                            <label class="block text-sm font-bold mb-2 text-gray-700">Card Number</label>
-                            <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19"
-                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl mb-3">
-                            <div class="grid grid-cols-2 gap-3 mb-4">
-                                <div>
-                                    <label class="block text-sm font-bold mb-2 text-gray-700">Expiry</label>
-                                    <input type="text" id="card-expiry" placeholder="MM/YY" maxlength="5"
-                                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold mb-2 text-gray-700">CVV</label>
-                                    <input type="text" id="card-cvv" placeholder="123" maxlength="3"
-                                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="wallet-form" class="hidden">
-                            <p class="text-sm text-gray-600 mb-4">You will be redirected to complete payment.</p>
-                            <select id="wallet-select" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl mb-4 font-semibold">
-                                <option value="googlepay">Google Pay</option>
-                                <option value="phonepe">PhonePe</option>
-                                <option value="paytm">Paytm</option>
-                                <option value="amazonpay">Amazon Pay</option>
-                            </select>
-                        </div>
-
-                        <button onclick="processPayment()" class="w-full py-4 btn-primary text-white font-bold rounded-xl shadow-lg">
-                            Pay Now
-                        </button>
-                    </div>
-                </div>
-
-                <div id="payment-processing" class="hidden glass-dark rounded-2xl p-8 text-center">
-                    <div class="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-                    <h4 class="font-bold text-gray-800 text-lg mb-2">Processing Payment...</h4>
-                    <p class="text-sm text-gray-600">Please wait</p>
-                </div>
-
-                <div id="payment-success" class="hidden glass-dark rounded-2xl p-8 text-center">
-                    <div class="w-20 h-20 bg-green-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                        <span class="material-symbols-rounded text-5xl text-green-600">check_circle</span>
-                    </div>
-                    <h4 class="font-bold text-gray-800 text-xl mb-2">Payment Successful!</h4>
-                    <p class="text-sm text-gray-600 mb-4">Transaction completed</p>
-                    <div class="glass-dark rounded-xl p-4 mb-4">
-                        <div class="flex justify-between text-sm mb-2">
-                            <span class="text-gray-600 font-semibold">Transaction ID</span>
-                            <span class="font-bold" id="txn-id">TXN123456789</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600 font-semibold">Amount Paid</span>
-                            <span class="font-bold text-green-600" id="paid-amount">₹500</span>
-                        </div>
-                    </div>
-                    <button onclick="closeRazorpaySuccess()" class="w-full py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
-                        Done
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Modal -->
-        <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
-            <div class="glass-card p-6 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto animate-slideUp">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                        <span class="material-symbols-rounded mr-2 text-purple-600">psychology</span>
-                        AI Meal Advisor
-                    </h3>
-                    <button onclick="closeAiModal()" class="p-2 rounded-xl hover:bg-gray-100">
-                        <span class="material-symbols-rounded text-gray-600">close</span>
-                    </button>
-                </div>
-                <div id="ai-result" class="mt-4"></div>
             </div>
         </div>
 
@@ -538,15 +362,17 @@
                         <span class="material-symbols-rounded text-gray-600">close</span>
                     </button>
                 </div>
-                <div id="order-tracking-content"></div>
+                <div id="order-modal-content"></div>
             </div>
         </div>
+        
+        <!-- Hidden QR Reader Container -->
+        <div id="qr-reader-temp" style="display: none;"></div>
     </div>
 
     <script>
-        // State Management
+        // ===== STATE MANAGEMENT =====
         let currentUser = null;
-        let html5QrCode = null;
         let cart = [];
         let borrowedBooks = [];
         let notifications = [];
@@ -555,10 +381,6 @@
         let availableBooks = [];
         let sustainabilityScore = 85;
         let ecoChoices = 42;
-        let currentPaymentAmount = 0;
-        let currentPaymentType = '';
-        let selectedPaymentMethod = '';
-        let pendingCheckout = false;
         
         const MENU_ITEMS = {
             1: { id: 1, name: 'Veg Biryani', price: 60, veg: true, emoji: '🍚', calories: 450, protein: 12 },
@@ -569,7 +391,24 @@
             6: { id: 6, name: 'Veg Sandwich', price: 40, veg: true, emoji: '🥪', calories: 250, protein: 7 }
         };
 
-        // Utility Functions
+        // ===== UTILITY FUNCTIONS (from shorter version) =====
+        function get(key, def = null) {
+            try {
+                return JSON.parse(localStorage.getItem(key)) || def;
+            } catch { return def; }
+        }
+
+        function set(key, val) {
+            try {
+                localStorage.setItem(key, JSON.stringify(val));
+                console.log('💾 Saved:', key, val);
+                return true;
+            } catch (error) {
+                console.error(`Error writing ${key}:`, error);
+                return false;
+            }
+        }
+
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
@@ -579,28 +418,7 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        function safeGetItem(key, defaultValue = null) {
-            try {
-                const item = localStorage.getItem(key);
-                return item ? JSON.parse(item) : defaultValue;
-            } catch (error) {
-                console.error(`Error reading ${key}:`, error);
-                return defaultValue;
-            }
-        }
-
-        function safeSetItem(key, value) {
-            try {
-                localStorage.setItem(key, JSON.stringify(value));
-                return true;
-            } catch (error) {
-                console.error(`Error writing ${key}:`, error);
-                showToast('Failed to save data', 'error');
-                return false;
-            }
-        }
-
-        // Data Initialization
+        // ===== DATA INITIALIZATION =====
         function initializeData() {
             availableBooks = [
                 { id: 1, title: 'The Tech Future', author: 'John Tech', available: true, category: 'Technology', rating: 4.5 },
@@ -611,33 +429,28 @@
                 { id: 6, title: 'Design Thinking', author: 'Emma Design', available: true, category: 'Design', rating: 4.4 }
             ];
 
-            borrowedBooks = safeGetItem('borrowed_books', [
-                { id: 1, title: 'The Silent Observer', dueDate: '2025-10-15', author: 'John Doe', fine: 0 },
-                { id: 2, title: 'Campus Chronicles', dueDate: '2025-10-20', author: 'Jane Smith', fine: 0 }
+            borrowedBooks = get('borrowed_books', []);
+            notifications = get('notifications', [
+                { id: 1, icon: 'check_circle', color: 'green', title: 'Welcome to CampusConnect!', time: 'Just now' }
             ]);
-
-            notifications = [
-                { id: 1, icon: 'check_circle', color: 'green', title: 'Your order #45 is ready!', time: '2 min ago' },
-                { id: 2, icon: 'menu_book', color: 'blue', title: 'Book due tomorrow', time: '3 hours ago' },
-                { id: 3, icon: 'account_balance_wallet', color: 'green', title: 'Wallet recharged: +₹500', time: 'Today' }
-            ];
-
-            orders = safeGetItem('orders', []);
-            transactions = safeGetItem('transactions', []);
+            orders = get('orders', []);
+            transactions = get('transactions', []);
+            
+            console.log('📦 Data initialized - Orders:', orders.length);
         }
 
-        // Auth Functions
+        // ===== AUTH FUNCTIONS =====
         function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
 
-            const users = safeGetItem('campusconnect_users', []);
+            const users = get('campusconnect_users', []);
             const user = users.find(u => u.email === email && u.password === password);
 
             if (user) {
                 currentUser = user;
-                safeSetItem('campusconnect_current_user', user);
+                set('campusconnect_current_user', user);
                 showMainApp();
                 showToast('Welcome back!');
             } else {
@@ -652,7 +465,7 @@
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
 
-            const users = safeGetItem('campusconnect_users', []);
+            const users = get('campusconnect_users', []);
             
             if (users.find(u => u.email === email)) {
                 showToast('User already exists!', 'error');
@@ -672,9 +485,9 @@
             };
 
             users.push(newUser);
-            safeSetItem('campusconnect_users', users);
+            set('campusconnect_users', users);
             currentUser = newUser;
-            safeSetItem('campusconnect_current_user', newUser);
+            set('campusconnect_current_user', newUser);
             showMainApp();
             showToast('Account created successfully!');
         }
@@ -695,367 +508,39 @@
             initializeApp();
         }
 
-        function handleLogout() {
+        window.handleLogout = function() {
             if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('campusconnect_current_user');
+                localStorage.clear();
                 location.reload();
             }
-        }
+        };
 
-        // App Initialization
+        // Expose auth functions to global scope
+        window.showLogin = showLogin;
+        window.showSignup = showSignup;
+
+        // ===== APP INITIALIZATION =====
         function initializeApp() {
             initializeData();
-            cart = safeGetItem('campusconnect_cart', []);
+            currentUser = get('campusconnect_current_user');
+            cart = get('cart', []);
+            console.log('🛒 Cart loaded:', cart.length);
             loadPage('home');
             updateNotificationsList();
         }
 
-        // QR Functions using qrenco.de
-        function startScannerCamera() {
-            const statusDiv = document.getElementById('qr-result-status');
+        // ===== CART & CHECKOUT (from shorter version - WORKING) =====
+        window.addToCart = function(itemId) {
+            console.log('➕ Adding item:', itemId);
+            const item = MENU_ITEMS[itemId];
+            const existing = cart.find(c => c.id === itemId);
             
-            if (typeof Html5Qrcode === 'undefined') {
-                statusDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 text-sm font-semibold rounded-xl text-center';
-                statusDiv.innerHTML = 'QR library not loaded';
-                return;
-            }
-
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader");
-            }
-            
-            if (html5QrCode.isScanning) return;
-            
-            statusDiv.className = 'mt-4 p-3 bg-blue-50 text-blue-700 text-sm font-semibold rounded-xl text-center';
-            statusDiv.innerHTML = 'Starting camera...';
-
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    statusDiv.className = 'mt-4 p-3 bg-green-100 text-green-700 text-sm font-semibold rounded-xl text-center';
-                    statusDiv.innerHTML = `✅ Scanned: <strong>${decodedText}</strong>`;
-                    stopScannerCamera();
-                    setTimeout(() => processQRCode(decodedText), 1000);
-                }
-            ).then(() => {
-                statusDiv.innerHTML = '📷 Point camera at QR code...';
-            }).catch(err => {
-                statusDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 text-sm font-semibold rounded-xl text-center';
-                statusDiv.innerHTML = '❌ Failed to access camera';
-                showToast('Camera access denied', 'error');
-            });
-        }
-
-        function processQRCode(data) {
-            showToast(`QR Code: ${data}`);
-            closeQrModal();
-        }
-
-        function stopScannerCamera() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop();
-            }
-        }
-        
-        function generateUserQrCode() {
-            const qrDisplay = document.getElementById('qrcode-display');
-            const displayUserId = document.getElementById('display-user-id');
-            
-            const data = `CC-${currentUser.roll}-${currentUser.id}`;
-            displayUserId.textContent = data;
-            
-            // Using qrenco.de API to generate QR code
-            qrDisplay.src = `https://qrenco.de/${encodeURIComponent(data)}`;
-            qrDisplay.alt = 'User QR Code';
-        }
-
-        function downloadQR() {
-            const qrImg = document.getElementById('qrcode-display');
-            const link = document.createElement('a');
-            link.href = qrImg.src;
-            link.download = `CampusConnect-${currentUser.roll}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast('QR Code downloaded!');
-        }
-
-        function switchQrTab(tabName) {
-            const scanContainer = document.getElementById('qr-scan-container');
-            const myCodeContainer = document.getElementById('qr-my-code-container');
-            const tabScan = document.getElementById('tab-scan');
-            const tabMyCode = document.getElementById('tab-my-code');
-            const title = document.getElementById('qr-modal-title');
-
-            tabScan.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all';
-            tabMyCode.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all';
-
-            if (tabName === 'scan') {
-                scanContainer.classList.remove('hidden');
-                myCodeContainer.classList.add('hidden');
-                tabScan.className = 'flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all';
-                title.textContent = "Scan QR Code";
-                setTimeout(() => startScannerCamera(), 100);
-            } else {
-                scanContainer.classList.add('hidden');
-                myCodeContainer.classList.remove('hidden');
-                tabMyCode.className = 'flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all';
-                title.textContent = "My QR Code";
-                stopScannerCamera();
-                setTimeout(() => generateUserQrCode(), 100);
-            }
-        }
-        
-        function openQrModal() {
-            document.getElementById('qr-modal').style.display = 'flex';
-            switchQrTab('scan');
-        }
-
-        function closeQrModal() {
-            stopScannerCamera();
-            document.getElementById('qr-modal').style.display = 'none';
-        }
-
-        // Payment Functions
-        function openRazorpay(amount, type = 'wallet') {
-            currentPaymentAmount = parseInt(amount);
-            currentPaymentType = type;
-            
-            document.getElementById('payment-amount').textContent = `₹${currentPaymentAmount}`;
-            document.getElementById('payment-description').textContent = 
-                type === 'wallet' ? 'Wallet Recharge' : type === 'canteen' ? 'Canteen Order' : 'Library Fine';
-            
-            showPaymentMethods();
-            document.getElementById('razorpay-modal').style.display = 'flex';
-        }
-
-        function closeRazorpay() {
-            document.getElementById('razorpay-modal').style.display = 'none';
-            resetRazorpay();
-        }
-
-        function resetRazorpay() {
-            document.getElementById('payment-methods').classList.remove('hidden');
-            document.getElementById('payment-details').classList.add('hidden');
-            document.getElementById('payment-processing').classList.add('hidden');
-            document.getElementById('payment-success').classList.add('hidden');
-        }
-
-        function showPaymentMethods() {
-            document.getElementById('payment-methods').classList.remove('hidden');
-            document.getElementById('payment-details').classList.add('hidden');
-            document.getElementById('upi-form').classList.add('hidden');
-            document.getElementById('card-form').classList.add('hidden');
-            document.getElementById('wallet-form').classList.add('hidden');
-        }
-
-        function selectPaymentMethod(method) {
-            selectedPaymentMethod = method;
-            document.getElementById('payment-methods').classList.add('hidden');
-            document.getElementById('payment-details').classList.remove('hidden');
-            
-            document.getElementById('upi-form').classList.add('hidden');
-            document.getElementById('card-form').classList.add('hidden');
-            document.getElementById('wallet-form').classList.add('hidden');
-            
-            if (method === 'upi') document.getElementById('upi-form').classList.remove('hidden');
-            else if (method === 'card') document.getElementById('card-form').classList.remove('hidden');
-            else if (method === 'wallet') document.getElementById('wallet-form').classList.remove('hidden');
-        }
-
-        function processPayment() {
-            // Validate inputs
-            if (selectedPaymentMethod === 'upi') {
-                const upiId = document.getElementById('upi-id').value.trim();
-                if (!upiId) {
-                    showToast('Please enter UPI ID', 'error');
-                    return;
-                }
-            } else if (selectedPaymentMethod === 'card') {
-                const cardNumber = document.getElementById('card-number').value.replace(/\s/g, '');
-                const expiry = document.getElementById('card-expiry').value;
-                const cvv = document.getElementById('card-cvv').value;
-                
-                if (!cardNumber || !expiry || !cvv) {
-                    showToast('Please fill all card details', 'error');
-                    return;
-                }
-            }
-
-            document.getElementById('payment-details').classList.add('hidden');
-            document.getElementById('payment-processing').classList.remove('hidden');
-            setTimeout(() => completePayment(), 2000);
-        }
-
-        function completePayment() {
-            currentUser.wallet += currentPaymentAmount;
-            currentUser.points += Math.floor(currentPaymentAmount / 10);
-            
-            const txnId = `TXN${Date.now()}`;
-            transactions.push({
-                id: txnId,
-                type: 'credit',
-                amount: currentPaymentAmount,
-                description: 'Wallet Recharge',
-                method: selectedPaymentMethod.toUpperCase(),
-                timestamp: new Date().toISOString()
-            });
-            
-            safeSetItem('transactions', transactions);
-            safeSetItem('campusconnect_current_user', currentUser);
-
-            document.getElementById('payment-processing').classList.add('hidden');
-            document.getElementById('payment-success').classList.remove('hidden');
-            document.getElementById('txn-id').textContent = txnId;
-            document.getElementById('paid-amount').textContent = `₹${currentPaymentAmount}`;
-
-            notifications.unshift({
-                id: Date.now(),
-                icon: 'account_balance_wallet',
-                color: 'green',
-                title: `Wallet recharged: +₹${currentPaymentAmount}`,
-                time: 'Just now'
-            });
-            updateNotificationsList();
-        }
-
-        function closeRazorpaySuccess() {
-            closeRazorpay();
-            showToast('Payment successful!');
-            
-            if (currentPaymentType === 'canteen' && pendingCheckout) {
-                loadPage('canteen');
-                setTimeout(() => { if (cart.length > 0) processCanteenOrder(); }, 500);
-            } else {
-                loadPage(currentPaymentType === 'wallet' ? 'profile' : 'home');
-            }
-            pendingCheckout = false;
-        }
-
-        function processCanteenOrder() {
-            if (cart.length === 0) {
-                showToast('Cart is empty!', 'error');
-                return;
-            }
-            
-            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            
-            if (currentUser.wallet < total) {
-                showToast('Insufficient balance!', 'error');
-                return;
-            }
-
-            currentUser.wallet -= total;
-            currentUser.points += Math.floor(total / 10);
-            
-            const orderId = `ORD-${Date.now()}`;
-            const newOrder = {
-                id: orderId,
-                token: Math.floor(Math.random() * 100) + 1,
-                items: [...cart],
-                total,
-                status: 'preparing',
-                timestamp: new Date().toISOString(),
-                counter: Math.floor(Math.random() * 5) + 1
-            };
-            
-            orders.push(newOrder);
-            transactions.push({
-                id: `TXN-${Date.now()}`,
-                type: 'debit',
-                amount: total,
-                description: 'Canteen Order',
-                timestamp: new Date().toISOString()
-            });
-            
-            safeSetItem('orders', orders);
-            safeSetItem('transactions', transactions);
-            safeSetItem('campusconnect_current_user', currentUser);
-            
-            cart = [];
-            safeSetItem('campusconnect_cart', cart);
-            
-            showToast('Order placed successfully!');
-            loadPage('canteen');
-            
-            setTimeout(() => updateOrderStatus(orderId, 'ready'), 5000);
-            setTimeout(() => showOrderTracking(newOrder), 300);
-        }
-
-        // AI Meal Advisor
-        async function getAIMealSuggestions(mealName) {
-            const modal = document.getElementById('ai-modal');
-            const resultDiv = document.getElementById('ai-result');
-            
-            modal.style.display = 'flex';
-            resultDiv.innerHTML = `
-                <div class="flex items-center justify-center py-8">
-                    <span class="material-symbols-rounded text-5xl text-purple-600 animate-spin">progress_activity</span>
-                </div>
-                <p class="text-center text-gray-600 font-semibold">Analyzing ${mealName}...</p>
-            `;
-
-            try {
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 1500,
-                        messages: [{
-                            role: "user",
-                            content: `As a nutrition expert, analyze "${mealName}" and provide:
-                            
-1. Quick nutritional overview
-2. Three healthier alternatives (hostel-friendly, budget-friendly)
-3. Simple modifications to make it healthier
-
-Keep it concise and use emojis.`
-                        }]
-                    })
-                });
-
-                const data = await response.json();
-                const text = data.content?.[0]?.text || 'No response received';
-                
-                resultDiv.innerHTML = `
-                    <div class="glass-dark p-6 rounded-2xl mb-4">
-                        <h4 class="font-bold text-gray-800 mb-3 flex items-center">
-                            <span class="material-symbols-rounded mr-2 text-purple-600">restaurant_menu</span>
-                            ${mealName}
-                        </h4>
-                        <div class="text-gray-700 leading-relaxed whitespace-pre-wrap">${text}</div>
-                    </div>
-                    <button onclick="closeAiModal()" class="w-full py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
-                        Got It!
-                    </button>
-                `;
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-red-700 font-semibold">
-                        Unable to connect to AI advisor
-                    </div>
-                    <button onclick="closeAiModal()" class="w-full mt-4 py-2 bg-gray-300 text-gray-700 font-bold rounded-xl">
-                        Close
-                    </button>
-                `;
-            }
-        }
-
-        function closeAiModal() {
-            document.getElementById('ai-modal').style.display = 'none';
-        }
-
-        // Cart Functions
-        function addToCart(itemIdOrObject) {
-            let item = typeof itemIdOrObject === 'number' ? MENU_ITEMS[itemIdOrObject] : itemIdOrObject;
-
-            const existingItem = cart.find(i => i.id === item.id);
-            if (existingItem) {
-                existingItem.quantity++;
+            if (existing) {
+                existing.quantity++;
+                console.log('📦 Updated quantity:', existing.quantity);
             } else {
                 cart.push({ ...item, quantity: 1 });
+                console.log('📦 Added new item to cart');
             }
             
             if (item.veg) {
@@ -1063,153 +548,188 @@ Keep it concise and use emojis.`
                 sustainabilityScore = Math.min(100, sustainabilityScore + 1);
             }
             
-            safeSetItem('campusconnect_cart', cart);
+            set('cart', cart);
             showToast(`${item.name} added!`);
             loadPage('canteen');
-        }
+        };
 
-        function removeFromCart(itemId) {
-            const itemIndex = cart.findIndex(i => i.id === itemId);
-            if (itemIndex > -1) {
-                if (cart[itemIndex].quantity > 1) {
-                    cart[itemIndex].quantity--;
+        window.removeFromCart = function(itemId) {
+            console.log('➖ Removing item:', itemId);
+            const idx = cart.findIndex(c => c.id === itemId);
+            if (idx > -1) {
+                if (cart[idx].quantity > 1) {
+                    cart[idx].quantity--;
                 } else {
-                    cart.splice(itemIndex, 1);
+                    cart.splice(idx, 1);
                 }
             }
-            safeSetItem('campusconnect_cart', cart);
+            set('cart', cart);
             loadPage('canteen');
-        }
+        };
 
-        function clearCart() {
+        window.clearCart = function() {
             if (confirm('Clear all items from cart?')) {
                 cart = [];
-                safeSetItem('campusconnect_cart', cart);
+                set('cart', cart);
                 showToast('Cart cleared!');
                 loadPage('canteen');
             }
-        }
+        };
 
-        function checkout() {
+        window.checkout = function() {
+            console.log('💳 Checkout - Cart:', cart);
             if (cart.length === 0) {
-                showToast('Cart is empty!', 'error');
+                showToast('Cart empty!', 'error');
                 return;
             }
             
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            currentPaymentAmount = total;
-            currentPaymentType = 'canteen';
-            showPaymentMethodModal(total);
-        }
-
-        function showPaymentMethodModal(amount) {
-            document.getElementById('payment-method-amount').textContent = `₹${amount}`;
-            document.getElementById('wallet-balance-display').textContent = `₹${currentUser.wallet}`;
+            console.log('💰 Total:', total);
             
-            const walletBtn = document.getElementById('wallet-payment-btn');
-            if (currentUser.wallet < amount) {
-                walletBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                walletBtn.disabled = true;
-            } else {
-                walletBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                walletBtn.disabled = false;
+            if (currentUser.wallet < total) {
+                showToast('Insufficient balance! Add money to wallet.', 'error');
+                return;
             }
             
-            document.getElementById('payment-method-modal').style.display = 'flex';
-        }
-
-        function closePaymentMethodModal() {
-            document.getElementById('payment-method-modal').style.display = 'none';
-        }
-
-        function payWithWallet() {
-            closePaymentMethodModal();
-            processCanteenOrder();
-        }
-
-        function payWithRazorpay() {
-            closePaymentMethodModal();
-            pendingCheckout = true;
-            openRazorpay(currentPaymentAmount, 'canteen');
-        }
-
-        function updateOrderStatus(orderId, status) {
-            const order = orders.find(o => o.id === orderId);
-            if (order) {
-                order.status = status;
-                safeSetItem('orders', orders);
-                
-                if (status === 'ready') {
-                    showToast(`Order #${order.token} is ready!`);
+            // Process payment
+            currentUser.wallet -= total;
+            currentUser.points += Math.floor(total / 10);
+            set('campusconnect_current_user', currentUser);
+            
+            // Create order
+            const order = {
+                id: Date.now(),
+                token: Math.floor(Math.random() * 90) + 10,
+                items: [...cart],
+                total,
+                status: 'preparing',
+                counter: Math.floor(Math.random() * 5) + 1,
+                time: new Date().toISOString()
+            };
+            
+            orders.push(order);
+            set('orders', orders);
+            console.log('✅ ORDER CREATED:', order);
+            
+            // Add transaction
+            transactions.push({
+                id: `TXN-${Date.now()}`,
+                type: 'debit',
+                amount: total,
+                description: 'Canteen Order',
+                timestamp: new Date().toISOString()
+            });
+            set('transactions', transactions);
+            
+            // Clear cart
+            cart = [];
+            set('cart', cart);
+            
+            // Add notification
+            notifications.unshift({
+                id: Date.now(),
+                icon: 'restaurant',
+                color: 'orange',
+                title: `Order #${order.token} placed - ₹${total}`,
+                time: 'Just now'
+            });
+            set('notifications', notifications);
+            updateNotificationsList();
+            
+            showToast(`Order #${order.token} placed!`);
+            showOrderModal(order);
+            
+            // Mark ready after 5 seconds (from shorter version)
+            setTimeout(() => {
+                const idx = orders.findIndex(o => o.id === order.id);
+                if (idx > -1) {
+                    orders[idx].status = 'ready';
+                    set('orders', orders);
+                    showToast(`Order #${order.token} is READY!`);
+                    console.log('🔔 ORDER READY');
+                    
                     notifications.unshift({
                         id: Date.now(),
                         icon: 'check_circle',
                         color: 'green',
-                        title: `Order #${order.token} ready for pickup!`,
+                        title: `Order #${order.token} ready at Counter ${orders[idx].counter}!`,
                         time: 'Just now'
                     });
+                    set('notifications', notifications);
                     updateNotificationsList();
-                    loadPage('canteen');
-                } else if (status === 'completed') {
+                    
                     loadPage('canteen');
                 }
+            }, 5000);
+        };
+
+        window.completeOrder = function(orderId) {
+            console.log('✓ Completing order:', orderId);
+            const idx = orders.findIndex(o => o.id === orderId);
+            if (idx > -1) {
+                orders[idx].status = 'completed';
+                set('orders', orders);
+                showToast('Order collected!');
+                loadPage('canteen');
             }
-        }
+        };
 
-        function showOrderTracking(order) {
-            const modal = document.getElementById('order-modal');
-            const content = document.getElementById('order-tracking-content');
-            
-            content.innerHTML = `
-                <div class="text-center mb-6">
-                    <div class="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-xl">
-                        <span class="text-4xl font-black text-white">#${order.token}</span>
-                    </div>
-                    <h4 class="text-2xl font-bold text-gray-800 mb-2">Order Placed!</h4>
-                    <p class="text-gray-600 font-semibold">Order ID: ${order.id}</p>
+        function showOrderModal(order) {
+            document.getElementById('order-modal-content').innerHTML = `
+                <h3 class="text-2xl font-bold mb-4 text-center">Order Placed! 🎉</h3>
+                <div class="text-center mb-4">
+                    <div class="text-6xl font-black text-green-600 mb-2">#${order.token}</div>
+                    <p class="text-lg font-bold">Counter ${order.counter}</p>
                 </div>
-                
-                <div class="glass-dark border-2 border-blue-200 rounded-2xl p-4 mb-4">
-                    <h5 class="font-bold text-gray-800 mb-3">Order Summary</h5>
-                    ${order.items.map(item => `
-                        <div class="flex justify-between text-sm mb-2 font-semibold">
-                            <span>${item.name} x${item.quantity}</span>
-                            <span>₹${item.price * item.quantity}</span>
-                        </div>
-                    `).join('')}
-                    <div class="border-t-2 border-blue-300 mt-3 pt-3 flex justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span class="text-green-600">₹${order.total}</span>
-                    </div>
+                <div class="bg-gray-100 p-4 rounded-xl mb-4">
+                    ${order.items.map(i => `<div class="flex justify-between mb-2"><span>${i.name} x${i.quantity}</span><span>₹${i.price * i.quantity}</span></div>`).join('')}
+                    <div class="border-t-2 pt-2 mt-2 flex justify-between font-bold"><span>Total</span><span>₹${order.total}</span></div>
                 </div>
-                
-                <button onclick="closeOrderModal()" class="w-full py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
-                    Close
-                </button>
+                <button onclick="closeOrderModal()" class="w-full py-3 btn-primary text-white font-bold rounded-xl">Got it!</button>
             `;
-            
-            modal.style.display = 'flex';
+            document.getElementById('order-modal').style.display = 'flex';
         }
 
-        function closeOrderModal() {
+        window.closeOrderModal = function() {
             document.getElementById('order-modal').style.display = 'none';
-            loadPage(document.querySelector('.nav-item.active')?.getAttribute('data-page') || 'home');
-        }
+        };
 
-        // Wallet Functions
-        function addMoney() {
+        // ===== WALLET =====
+        window.addMoney = function() {
             const amount = prompt('Enter amount to add (₹):');
             if (amount && !isNaN(amount) && parseInt(amount) > 0) {
-                pendingCheckout = false;
-                openRazorpay(parseInt(amount), 'wallet');
+                currentUser.wallet += parseInt(amount);
+                currentUser.points += Math.floor(parseInt(amount) / 10);
+                
+                transactions.push({
+                    id: `TXN-${Date.now()}`,
+                    type: 'credit',
+                    amount: parseInt(amount),
+                    description: 'Wallet Recharge',
+                    timestamp: new Date().toISOString()
+                });
+                set('transactions', transactions);
+                set('campusconnect_current_user', currentUser);
+                
+                notifications.unshift({
+                    id: Date.now(),
+                    icon: 'account_balance_wallet',
+                    color: 'green',
+                    title: `Wallet recharged: +₹${amount}`,
+                    time: 'Just now'
+                });
+                set('notifications', notifications);
+                updateNotificationsList();
+                
+                showToast(`Added ₹${amount} to wallet!`);
+                loadPage('profile');
             } else if (amount !== null) {
                 showToast('Invalid amount', 'error');
             }
-        }
+        };
 
-        function showTransactions() {
-            const modal = document.getElementById('order-modal');
-            const content = document.getElementById('order-tracking-content');
+        window.showTransactions = function() {
+            const content = document.getElementById('order-modal-content');
             
             if (transactions.length === 0) {
                 content.innerHTML = `
@@ -1248,10 +768,10 @@ Keep it concise and use emojis.`
                 `;
             }
             
-            modal.style.display = 'flex';
-        }
+            document.getElementById('order-modal').style.display = 'flex';
+        };
 
-        // Library Functions
+        // ===== LIBRARY =====
         function borrowBook(bookId) {
             const book = availableBooks.find(b => b.id === bookId);
             if (!book || !book.available) {
@@ -1271,10 +791,10 @@ Keep it concise and use emojis.`
             });
             
             book.available = false;
-            safeSetItem('borrowed_books', borrowedBooks);
+            set('borrowed_books', borrowedBooks);
             
             currentUser.points += 10;
-            safeSetItem('campusconnect_current_user', currentUser);
+            set('campusconnect_current_user', currentUser);
             
             showToast(`"${book.title}" borrowed!`);
             loadPage('library');
@@ -1291,11 +811,7 @@ Keep it concise and use emojis.`
             const fine = daysOverdue * 5;
             
             if (fine > 0 && currentUser.wallet < fine) {
-                if (confirm(`Fine: ₹${fine}. Insufficient balance! Recharge wallet?`)) {
-                    currentPaymentAmount = fine;
-                    currentPaymentType = 'fine';
-                    openRazorpay(fine, 'fine');
-                }
+                showToast(`Fine: ₹${fine}. Please recharge wallet first!`, 'error');
                 return;
             }
             
@@ -1308,12 +824,12 @@ Keep it concise and use emojis.`
                     description: `Library Fine - ${book.title}`,
                     timestamp: new Date().toISOString()
                 });
-                safeSetItem('transactions', transactions);
-                safeSetItem('campusconnect_current_user', currentUser);
+                set('transactions', transactions);
+                set('campusconnect_current_user', currentUser);
             }
             
             borrowedBooks.splice(index, 1);
-            safeSetItem('borrowed_books', borrowedBooks);
+            set('borrowed_books', borrowedBooks);
             
             const availBook = availableBooks.find(b => b.title === book.title);
             if (availBook) availBook.available = true;
@@ -1371,7 +887,146 @@ Keep it concise and use emojis.`
             searchBooks(query);
         }
 
-        // Notifications
+        // ===== QR SCANNER - Simplified with Image Upload =====
+        window.handleQrImageUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const statusDiv = document.getElementById('qr-result-status');
+            const previewContainer = document.getElementById('qr-preview-container');
+            const previewImg = document.getElementById('qr-preview');
+            
+            statusDiv.className = 'p-4 bg-blue-100 text-blue-700 text-sm font-bold rounded-xl text-center animate-pulse';
+            statusDiv.textContent = '🔍 Scanning QR code...';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewContainer.classList.remove('hidden');
+                
+                // Decode QR using html5-qrcode
+                if (typeof Html5Qrcode === 'undefined') {
+                    statusDiv.className = 'p-4 bg-red-100 text-red-700 text-sm font-bold rounded-xl text-center';
+                    statusDiv.textContent = '❌ QR Scanner not available';
+                    showToast('QR Scanner not loaded', 'error');
+                    return;
+                }
+                
+                const html5QrCode = new Html5Qrcode("qr-reader-temp");
+                html5QrCode.scanFile(file, true)
+                    .then(decodedText => {
+                        console.log('✅ QR Code scanned:', decodedText);
+                        statusDiv.className = 'p-4 bg-green-100 text-green-700 text-sm font-bold rounded-xl text-center';
+                        statusDiv.innerHTML = `✅ <strong>Scanned Successfully!</strong><br><span class="text-xs mt-1 block">${decodedText}</span>`;
+                        
+                        showToast(`QR Scanned: ${decodedText.substring(0, 25)}...`);
+                        
+                        notifications.unshift({
+                            id: Date.now(),
+                            icon: 'qr_code',
+                            color: 'purple',
+                            title: `QR Scanned: ${decodedText.substring(0, 30)}...`,
+                            time: 'Just now'
+                        });
+                        set('notifications', notifications);
+                        updateNotificationsList();
+                        
+                        setTimeout(() => {
+                            closeQrModal();
+                            previewContainer.classList.add('hidden');
+                        }, 3000);
+                    })
+                    .catch(err => {
+                        console.error('QR scan error:', err);
+                        statusDiv.className = 'p-4 bg-red-100 text-red-700 text-sm font-bold rounded-xl text-center';
+                        statusDiv.textContent = '❌ No QR code found in image. Try another image.';
+                        showToast('No QR code detected', 'error');
+                    });
+            };
+            reader.readAsDataURL(file);
+        };
+        
+        window.generateUserQrCode = function() {
+            const qrDisplay = document.getElementById('qrcode-display');
+            const displayUserId = document.getElementById('display-user-id');
+            
+            const data = `CAMPUSCONNECT-${currentUser.roll}-${currentUser.id}`;
+            displayUserId.textContent = data;
+            
+            // Generate QR code using qrenco.de
+            qrDisplay.src = `https://qrenco.de/${encodeURIComponent(data)}`;
+            qrDisplay.alt = 'User QR Code';
+            qrDisplay.style.imageRendering = 'pixelated';
+            console.log('✅ QR code generated for:', data);
+        };
+
+        window.downloadQR = function() {
+            const qrImg = document.getElementById('qrcode-display');
+            const data = `CAMPUSCONNECT-${currentUser.roll}-${currentUser.id}`;
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = `https://qrenco.de/${encodeURIComponent(data)}`;
+            link.download = `CampusConnect-QR-${currentUser.roll}.png`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('QR Code download started!');
+        };
+
+        window.switchQrTab = function(tabName) {
+            const scanContainer = document.getElementById('qr-scan-container');
+            const myCodeContainer = document.getElementById('qr-my-code-container');
+            const tabScan = document.getElementById('tab-scan');
+            const tabMyCode = document.getElementById('tab-my-code');
+            const title = document.getElementById('qr-modal-title');
+            const previewContainer = document.getElementById('qr-preview-container');
+
+            // Reset tab styles
+            tabScan.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all';
+            tabMyCode.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-gray-600 hover:bg-white hover:bg-opacity-50 transition-all';
+
+            if (tabName === 'scan') {
+                scanContainer.classList.remove('hidden');
+                myCodeContainer.classList.add('hidden');
+                tabScan.className = 'flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all';
+                title.textContent = "Scan QR Code";
+                
+                // Reset scan UI
+                if (previewContainer) {
+                    previewContainer.classList.add('hidden');
+                }
+                const statusDiv = document.getElementById('qr-result-status');
+                if (statusDiv) {
+                    statusDiv.className = 'p-4 bg-blue-50 text-blue-700 text-sm font-semibold rounded-xl text-center';
+                    statusDiv.textContent = '📷 Tap Camera to scan or Upload an image';
+                }
+            } else {
+                scanContainer.classList.add('hidden');
+                myCodeContainer.classList.remove('hidden');
+                tabMyCode.className = 'flex-1 py-2 text-sm font-bold rounded-lg btn-primary text-white transition-all';
+                title.textContent = "My QR Code";
+                setTimeout(() => generateUserQrCode(), 100);
+            }
+        };
+        
+        window.openQrModal = function() {
+            document.getElementById('qr-modal').style.display = 'flex';
+            switchQrTab('my-code'); // Start with My QR Code tab
+        };
+
+        window.closeQrModal = function() {
+            document.getElementById('qr-modal').style.display = 'none';
+            // Reset preview
+            const previewContainer = document.getElementById('qr-preview-container');
+            if (previewContainer) {
+                previewContainer.classList.add('hidden');
+            }
+        };
+
+        // ===== NOTIFICATIONS =====
         function updateNotificationsList() {
             const list = document.getElementById('notifications-list');
             
@@ -1398,7 +1053,7 @@ Keep it concise and use emojis.`
             `).join('');
         }
 
-        function toggleNotifications() {
+        window.toggleNotifications = function() {
             const center = document.getElementById('notification-center');
             const overlay = document.getElementById('notification-overlay');
             
@@ -1409,19 +1064,76 @@ Keep it concise and use emojis.`
                 center.classList.add('translate-x-full');
                 overlay.classList.add('hidden');
             }
-        }
+        };
 
-        function clearNotifications() {
-            if (confirm('Clear all notifications?')) {
-                notifications = [];
-                updateNotificationsList();
-                showToast('Notifications cleared!');
-            }
-        }
+        window.showSustainabilityDashboard = function() {
+            const content = document.getElementById('order-modal-content');
+            
+            content.innerHTML = `
+                <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center">
+                    <span class="material-symbols-rounded mr-2 text-green-600 text-2xl">eco</span>
+                    Sustainability Dashboard
+                </h4>
+                
+                <div class="text-center mb-6">
+                    <div class="relative inline-block">
+                        <svg class="transform -rotate-90" width="140" height="140">
+                            <circle cx="70" cy="70" r="55" stroke="#E5E7EB" stroke-width="12" fill="none" />
+                            <circle cx="70" cy="70" r="55" stroke="#10B981" stroke-width="12" fill="none" 
+                                    stroke-dasharray="345" stroke-dashoffset="${345 - (345 * sustainabilityScore / 100)}" 
+                                    stroke-linecap="round" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-4xl font-black text-green-600">${sustainabilityScore}%</span>
+                            <span class="text-xs text-gray-600 font-bold">Eco Score</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3 mb-6">
+                    <div class="glass-dark p-4 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">Sustainable Meals</span>
+                            <span class="text-green-600 font-black text-lg">${ecoChoices}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1 font-semibold">Vegetarian choices</p>
+                    </div>
+                    
+                    <div class="glass-dark p-4 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">Books Borrowed</span>
+                            <span class="text-blue-600 font-black text-lg">${borrowedBooks.length}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1 font-semibold">Resource sustainability</p>
+                    </div>
+                    
+                    <div class="glass-dark p-4 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">Digital Transactions</span>
+                            <span class="text-purple-600 font-black text-lg">${transactions.length}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1 font-semibold">Paperless payments</p>
+                    </div>
+                </div>
+                
+                <div class="p-6 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl text-white text-center shadow-lg">
+                    <p class="font-bold mb-2">🌍 CO₂ Saved</p>
+                    <p class="text-3xl font-black mb-1">${(ecoChoices * 0.8).toFixed(1)} kg</p>
+                    <p class="text-sm font-semibold">Keep going!</p>
+                </div>
+                
+                <button onclick="closeOrderModal()" class="w-full mt-4 py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
+                    Close
+                </button>
+            `;
+            
+            document.getElementById('order-modal').style.display = 'flex';
+        };
 
-        // Page Content Functions
+        // ===== PAGE CONTENT =====
         function getHomeContent() {
             const activeOrders = orders.filter(o => o.status !== 'completed');
+            console.log('🏠 Home - Active orders:', activeOrders);
             
             return `
                 <div class="animate-slideUp">
@@ -1447,19 +1159,19 @@ Keep it concise and use emojis.`
                             <span class="material-symbols-rounded mr-2 text-purple-600">bolt</span> Quick Actions
                         </h3>
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="loadPage('library')" class="p-4 btn-primary text-white rounded-xl shadow-lg font-bold">
+                            <button onclick="loadPage('library')" class="p-4 btn-primary text-white rounded-xl shadow-lg font-bold hover:scale-105 transition-transform">
                                 <span class="material-symbols-rounded block mb-1 text-3xl">menu_book</span>
                                 Library
                             </button>
-                            <button onclick="loadPage('canteen')" class="p-4 bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-xl shadow-lg font-bold">
+                            <button onclick="loadPage('canteen')" class="p-4 bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-xl shadow-lg font-bold hover:scale-105 transition-transform">
                                 <span class="material-symbols-rounded block mb-1 text-3xl">restaurant</span>
                                 Canteen
                             </button>
-                            <button onclick="openQrModal()" class="p-4 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-xl shadow-lg font-bold">
+                            <button onclick="openQrModal()" class="p-4 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-xl shadow-lg font-bold hover:scale-105 transition-transform">
                                 <span class="material-symbols-rounded block mb-1 text-3xl">qr_code_scanner</span>
                                 Scan QR
                             </button>
-                            <button onclick="addMoney()" class="p-4 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-xl shadow-lg font-bold">
+                            <button onclick="addMoney()" class="p-4 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-xl shadow-lg font-bold hover:scale-105 transition-transform">
                                 <span class="material-symbols-rounded block mb-1 text-3xl">add_card</span>
                                 Add Money
                             </button>
@@ -1469,18 +1181,24 @@ Keep it concise and use emojis.`
                     ${activeOrders.length > 0 ? `
                         <div class="glass-card p-6 rounded-2xl shadow-lg mb-6">
                             <h3 class="font-black text-lg text-gray-800 mb-4 flex items-center">
-                                <span class="material-symbols-rounded mr-2 text-orange-600">restaurant</span> Active Orders
+                                <span class="material-symbols-rounded mr-2 text-orange-600">restaurant</span> 
+                                Active Orders (${activeOrders.length})
                             </h3>
                             ${activeOrders.map(order => `
-                                <div class="glass-dark p-4 rounded-xl mb-3">
-                                    <div class="flex justify-between items-center">
+                                <div class="glass-dark p-4 rounded-xl mb-3 last:mb-0 ${order.status === 'ready' ? 'border-2 border-green-500 order-ready-glow' : ''}">
+                                    <div class="flex justify-between items-start">
                                         <div>
-                                            <p class="font-bold text-gray-800">Order #${order.token}</p>
-                                            <p class="text-sm text-gray-600">${order.status === 'ready' ? '✅ Ready for pickup' : '🍳 Preparing'}</p>
+                                            <p class="font-black text-gray-800 text-lg">Order #${order.token}</p>
+                                            <p class="text-sm font-bold mt-1 ${order.status === 'ready' ? 'text-green-600' : 'text-orange-600'}">
+                                                ${order.status === 'ready' ? '✅ READY! Pickup at Counter ' + order.counter : '🍳 Preparing at Counter ' + order.counter}
+                                            </p>
+                                            <p class="text-xs text-gray-500 mt-1 font-semibold">Total: ₹${order.total} • ${order.items.length} items</p>
                                         </div>
-                                        <button onclick="showOrderTracking(${JSON.stringify(order).replace(/"/g, '&quot;')})" class="text-purple-600 font-bold text-sm">
-                                            View
-                                        </button>
+                                        ${order.status === 'ready' ? `
+                                            <button onclick="completeOrder(${order.id})" class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm">
+                                                Collected
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 </div>
                             `).join('')}
@@ -1568,8 +1286,11 @@ Keep it concise and use emojis.`
         function getCanteenContent() {
             const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const activeOrder = orders.find(o => o.status === 'ready');
+            const readyOrders = orders.filter(o => o.status === 'ready');
+            const preparingOrders = orders.filter(o => o.status === 'preparing');
             const menuItems = Object.values(MENU_ITEMS);
+            
+            console.log('🍽️ Canteen - Ready:', readyOrders.length, 'Preparing:', preparingOrders.length, 'Cart:', cartCount);
 
             return `
                 <div class="animate-slideUp">
@@ -1579,34 +1300,62 @@ Keep it concise and use emojis.`
                             Canteen
                         </h2>
                         <div class="relative">
-                            <span class="material-symbols-rounded text-3xl text-white">shopping_cart</span>
-                            ${cartCount > 0 ? `<span class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-black shadow-lg">${cartCount}</span>` : ''}
+                            <span class="material-symbols-rounded text-4xl text-white">shopping_cart</span>
+                            ${cartCount > 0 ? `<span class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white text-sm rounded-full flex items-center justify-center font-black shadow-lg animate-bounce">${cartCount}</span>` : ''}
                         </div>
                     </div>
 
-                    ${activeOrder ? `
-                        <div class="mb-6 p-6 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl shadow-2xl animate-pulse">
-                            <div class="flex justify-between items-center mb-3">
-                                <h3 class="font-black text-white text-lg flex items-center">
-                                    <span class="material-symbols-rounded mr-2">check_circle</span>
-                                    Order Ready!
-                                </h3>
-                                <span class="text-4xl font-black text-white">#${activeOrder.token}</span>
-                            </div>
-                            <p class="text-sm text-white font-bold mb-3">Collect from Counter ${activeOrder.counter}</p>
-                            <button onclick="updateOrderStatus('${activeOrder.id}', 'completed'); loadPage('canteen')" 
-                                    class="w-full py-3 bg-white text-green-600 font-black rounded-xl shadow-lg">
-                                Mark as Collected
-                            </button>
+                    ${readyOrders.length > 0 ? `
+                        <div class="mb-6 p-6 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl shadow-2xl animate-bounce order-ready-glow">
+                            ${readyOrders.map(order => `
+                                <div class="mb-4 last:mb-0">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="font-black text-white text-xl flex items-center">
+                                            <span class="material-symbols-rounded mr-2 text-3xl">check_circle</span>
+                                            Order Ready!
+                                        </h3>
+                                        <span class="text-5xl font-black text-white">#${order.token}</span>
+                                    </div>
+                                    <p class="text-white font-bold text-lg mb-3">
+                                        🎉 Collect from Counter ${order.counter} now!
+                                    </p>
+                                    <button onclick="completeOrder(${order.id})" 
+                                            class="w-full py-3 bg-white text-green-600 font-black rounded-xl shadow-lg hover:bg-gray-100">
+                                        ✓ Mark as Collected
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${preparingOrders.length > 0 ? `
+                        <div class="mb-6 glass-card p-5 rounded-2xl shadow-lg border-2 border-orange-300">
+                            <h3 class="font-black text-gray-800 mb-3 flex items-center">
+                                <span class="material-symbols-rounded mr-2 text-orange-600">schedule</span>
+                                Order Preparing
+                            </h3>
+                            ${preparingOrders.map(order => `
+                                <div class="glass-dark p-4 rounded-xl mb-3 last:mb-0">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <p class="font-black text-gray-800 text-lg">Order #${order.token}</p>
+                                            <p class="text-sm text-orange-600 font-bold mt-1">🍳 Being prepared at Counter ${order.counter}</p>
+                                        </div>
+                                        <div class="animate-spin">
+                                            <span class="material-symbols-rounded text-3xl text-orange-600">schedule</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     ` : ''}
 
                     ${cart.length > 0 ? `
-                        <div class="mb-6 glass-card p-6 rounded-2xl shadow-lg">
+                        <div class="mb-6 glass-card p-6 rounded-2xl shadow-lg border-2 border-blue-400">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-black text-gray-800 flex items-center">
-                                    <span class="material-symbols-rounded mr-2 text-purple-600">shopping_basket</span>
-                                    Your Cart
+                                    <span class="material-symbols-rounded mr-2 text-purple-600 text-2xl">shopping_basket</span>
+                                    Your Cart (${cartCount} items)
                                 </h3>
                                 <button onclick="clearCart()" class="text-sm text-red-600 font-bold hover:underline">
                                     Clear
@@ -1616,15 +1365,15 @@ Keep it concise and use emojis.`
                                 ${cart.map(item => `
                                     <div class="flex justify-between items-center glass-dark p-3 rounded-xl">
                                         <div class="flex-1">
-                                            <p class="font-bold text-gray-800">${item.name}</p>
+                                            <p class="font-bold text-gray-800">${item.emoji} ${item.name}</p>
                                             <p class="text-sm text-gray-600 font-semibold">₹${item.price} × ${item.quantity}</p>
                                         </div>
                                         <div class="flex items-center space-x-2">
-                                            <button onclick="removeFromCart(${item.id})" class="w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 flex items-center justify-center font-bold">
+                                            <button onclick="removeFromCart(${item.id})" class="w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 flex items-center justify-center font-bold text-lg">
                                                 −
                                             </button>
-                                            <span class="font-black w-8 text-center">${item.quantity}</span>
-                                            <button onclick="addToCart(${item.id})" class="w-8 h-8 bg-green-100 text-green-600 rounded-full hover:bg-green-200 flex items-center justify-center font-bold">
+                                            <span class="font-black w-8 text-center text-lg">${item.quantity}</span>
+                                            <button onclick="addToCart(${item.id})" class="w-8 h-8 bg-green-100 text-green-600 rounded-full hover:bg-green-200 flex items-center justify-center font-bold text-lg">
                                                 +
                                             </button>
                                             <span class="font-black text-gray-800 ml-2 w-16 text-right">₹${item.price * item.quantity}</span>
@@ -1632,20 +1381,24 @@ Keep it concise and use emojis.`
                                     </div>
                                 `).join('')}
                             </div>
-                            <div class="glass-dark p-4 rounded-xl mb-4 flex justify-between items-center">
-                                <span class="font-black text-xl">Total:</span>
-                                <span class="font-black text-2xl text-purple-600">₹${cartTotal}</span>
+                            <div class="glass-dark p-5 rounded-xl mb-4 flex justify-between items-center border-2 border-purple-300">
+                                <span class="font-black text-2xl">Total:</span>
+                                <span class="font-black text-3xl text-purple-600">₹${cartTotal}</span>
                             </div>
-                            <button onclick="checkout()" class="w-full py-4 bg-gradient-to-br from-green-500 to-green-600 text-white font-black rounded-xl shadow-lg">
-                                Checkout
+                            <button onclick="checkout()" class="w-full py-4 bg-gradient-to-br from-green-500 to-green-600 text-white font-black text-lg rounded-xl shadow-lg hover:scale-105 transition-transform">
+                                <span class="material-symbols-rounded align-middle mr-2">check_circle</span>
+                                Checkout Now
                             </button>
                         </div>
                     ` : ''}
 
-                    <h3 class="font-black text-xl text-white mb-3">Today's Menu</h3>
+                    <h3 class="font-black text-xl text-white mb-4 flex items-center">
+                        <span class="material-symbols-rounded mr-2 text-2xl">restaurant_menu</span>
+                        Today's Menu
+                    </h3>
                     <div class="grid grid-cols-2 gap-4">
                         ${menuItems.map(item => `
-                            <div class="glass-card p-4 rounded-2xl shadow-lg stat-card">
+                            <div class="glass-card p-4 rounded-2xl shadow-lg stat-card hover:scale-105 transition-transform">
                                 <div class="text-5xl text-center mb-2">${item.emoji}</div>
                                 <p class="text-sm font-bold text-center truncate mb-2">${item.name}</p>
                                 <div class="flex justify-between items-center text-xs text-gray-600 mb-2 font-semibold">
@@ -1653,19 +1406,14 @@ Keep it concise and use emojis.`
                                     <span>${item.protein}g protein</span>
                                 </div>
                                 <div class="flex justify-between items-center mb-3">
-                                    <span class="text-lg font-black text-purple-600">₹${item.price}</span>
-                                    ${item.veg ? '<span class="text-xs text-green-600 font-bold">🌱</span>' : ''}
+                                    <span class="text-xl font-black text-purple-600">₹${item.price}</span>
+                                    ${item.veg ? '<span class="text-xs text-green-600 font-bold">🌱 Veg</span>' : ''}
                                 </div>
-                                <div class="flex space-x-2">
-                                    <button onclick="addToCart(${item.id})" 
-                                            class="flex-1 py-2 text-sm font-bold text-white btn-primary rounded-xl shadow-md">
-                                        Add
-                                    </button>
-                                    <button onclick="getAIMealSuggestions('${item.name}')" 
-                                            class="w-10 py-2 text-sm font-bold text-white bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-md">
-                                        <span class="material-symbols-rounded text-sm">psychology</span>
-                                    </button>
-                                </div>
+                                <button onclick="addToCart(${item.id})" 
+                                        class="w-full py-2 text-sm font-bold text-white btn-primary rounded-xl shadow-md hover:scale-105 transition-transform">
+                                    <span class="material-symbols-rounded align-middle mr-1">add_shopping_cart</span>
+                                    Add to Cart
+                                </button>
                             </div>
                         `).join('')}
                     </div>
@@ -1677,11 +1425,11 @@ Keep it concise and use emojis.`
             return `
                 <div class="animate-slideUp">
                     <div class="text-center mb-6">
-                        <div class="w-24 h-24 btn-primary rounded-full mx-auto mb-4 flex items-center justify-center text-5xl text-white font-black shadow-2xl">
+                        <div class="w-28 h-28 btn-primary rounded-full mx-auto mb-4 flex items-center justify-center text-6xl text-white font-black shadow-2xl">
                             ${currentUser?.name?.charAt(0) || 'U'}
                         </div>
-                        <h2 class="text-2xl font-black text-white">${currentUser?.name || 'User'}</h2>
-                        <p class="text-sm text-white font-bold mt-1">Roll: ${currentUser?.roll || 'N/A'}</p>
+                        <h2 class="text-3xl font-black text-white">${currentUser?.name || 'User'}</h2>
+                        <p class="text-sm text-white font-bold mt-2">Roll: ${currentUser?.roll || 'N/A'}</p>
                         <p class="text-sm text-white font-semibold flex items-center justify-center mt-1">
                             <span class="material-symbols-rounded mr-1 text-sm">mail</span> ${currentUser?.email || 'N/A'}
                         </p>
@@ -1691,15 +1439,17 @@ Keep it concise and use emojis.`
                         <div class="flex justify-between items-center mb-4">
                             <div>
                                 <p class="text-sm text-gray-600 font-bold">Wallet Balance</p>
-                                <h3 class="text-4xl font-black gradient-text">₹${currentUser?.wallet || 0}</h3>
+                                <h3 class="text-5xl font-black gradient-text">₹${currentUser?.wallet || 0}</h3>
                             </div>
-                            <span class="material-symbols-rounded text-5xl text-purple-600">account_balance_wallet</span>
+                            <span class="material-symbols-rounded text-6xl text-purple-600">account_balance_wallet</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="addMoney()" class="py-3 btn-primary text-white font-bold rounded-xl shadow-md">
+                            <button onclick="addMoney()" class="py-3 btn-primary text-white font-bold rounded-xl shadow-md hover:scale-105 transition-transform">
+                                <span class="material-symbols-rounded align-middle mr-1">add</span>
                                 Add Money
                             </button>
-                            <button onclick="showTransactions()" class="py-3 glass-dark text-gray-800 font-bold rounded-xl">
+                            <button onclick="showTransactions()" class="py-3 glass-dark text-gray-800 font-bold rounded-xl hover:scale-105 transition-transform">
+                                <span class="material-symbols-rounded align-middle mr-1">receipt_long</span>
                                 History
                             </button>
                         </div>
@@ -1709,25 +1459,25 @@ Keep it concise and use emojis.`
                         <div class="flex justify-between items-center">
                             <div>
                                 <p class="text-sm text-gray-600 font-bold">Reward Points</p>
-                                <h3 class="text-4xl font-black text-orange-600">${currentUser?.points || 0}</h3>
-                                <p class="text-sm text-gray-700 mt-1 font-semibold">Level ${Math.floor((currentUser?.points || 0) / 200) + 1} 🏆</p>
+                                <h3 class="text-5xl font-black text-orange-600">${currentUser?.points || 0}</h3>
+                                <p class="text-sm text-gray-700 mt-2 font-semibold">Level ${Math.floor((currentUser?.points || 0) / 200) + 1} 🏆</p>
                             </div>
-                            <span class="material-symbols-rounded text-5xl text-orange-600">workspace_premium</span>
+                            <span class="material-symbols-rounded text-6xl text-orange-600">workspace_premium</span>
                         </div>
                     </div>
 
                     <div class="space-y-3">
-                        <button onclick="showSustainabilityDashboard()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-gray-800">
+                        <button onclick="showSustainabilityDashboard()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-gray-800 hover:scale-105 transition-transform">
                             <span class="material-symbols-rounded mr-3 text-2xl text-green-600">eco</span>
                             Sustainability Dashboard
                         </button>
                         
-                        <button onclick="openQrModal()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-gray-800">
+                        <button onclick="openQrModal()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-gray-800 hover:scale-105 transition-transform">
                             <span class="material-symbols-rounded mr-3 text-2xl text-purple-600">qr_code_scanner</span>
                             My QR Code
                         </button>
                         
-                        <button onclick="handleLogout()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-red-600 border-2 border-red-200">
+                        <button onclick="handleLogout()" class="w-full glass-card p-4 rounded-2xl shadow-lg flex items-center font-bold text-red-600 border-2 border-red-200 hover:scale-105 transition-transform">
                             <span class="material-symbols-rounded mr-3 text-2xl">logout</span>
                             Logout
                         </button>
@@ -1736,72 +1486,7 @@ Keep it concise and use emojis.`
             `;
         }
 
-        function showSustainabilityDashboard() {
-            const modal = document.getElementById('order-modal');
-            const content = document.getElementById('order-tracking-content');
-            
-            content.innerHTML = `
-                <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center">
-                    <span class="material-symbols-rounded mr-2 text-green-600 text-2xl">eco</span>
-                    Sustainability
-                </h4>
-                
-                <div class="text-center mb-6">
-                    <div class="relative inline-block">
-                        <svg class="transform -rotate-90" width="140" height="140">
-                            <circle cx="70" cy="70" r="55" stroke="#E5E7EB" stroke-width="12" fill="none" />
-                            <circle cx="70" cy="70" r="55" stroke="#10B981" stroke-width="12" fill="none" 
-                                    stroke-dasharray="345" stroke-dashoffset="${345 - (345 * sustainabilityScore / 100)}" 
-                                    stroke-linecap="round" />
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center flex-col">
-                            <span class="text-4xl font-black text-green-600">${sustainabilityScore}%</span>
-                            <span class="text-xs text-gray-600 font-bold">Eco Score</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="space-y-3 mb-6">
-                    <div class="glass-dark p-4 rounded-xl">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-gray-800">Sustainable Meals</span>
-                            <span class="text-green-600 font-black text-lg">${ecoChoices}</span>
-                        </div>
-                        <p class="text-xs text-gray-600 mt-1 font-semibold">Vegetarian choices</p>
-                    </div>
-                    
-                    <div class="glass-dark p-4 rounded-xl">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-gray-800">Books Borrowed</span>
-                            <span class="text-blue-600 font-black text-lg">${borrowedBooks.length}</span>
-                        </div>
-                        <p class="text-xs text-gray-600 mt-1 font-semibold">Resource sustainability</p>
-                    </div>
-                    
-                    <div class="glass-dark p-4 rounded-xl">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-gray-800">Digital Transactions</span>
-                            <span class="text-purple-600 font-black text-lg">${transactions.length}</span>
-                        </div>
-                        <p class="text-xs text-gray-600 mt-1 font-semibold">Paperless payments</p>
-                    </div>
-                </div>
-                
-                <div class="p-6 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl text-white text-center shadow-lg">
-                    <p class="font-bold mb-2">🌍 CO₂ Saved</p>
-                    <p class="text-3xl font-black mb-1">${(ecoChoices * 0.8).toFixed(1)} kg</p>
-                    <p class="text-sm font-semibold">Keep going!</p>
-                </div>
-                
-                <button onclick="closeOrderModal()" class="w-full mt-4 py-3 btn-primary text-white font-bold rounded-xl shadow-lg">
-                    Close
-                </button>
-            `;
-            
-            modal.style.display = 'flex';
-        }
-
-        // Navigation
+        // ===== NAVIGATION =====
         function loadPage(pageName) {
             const pages = {
                 home: getHomeContent(),
@@ -1827,12 +1512,14 @@ Keep it concise and use emojis.`
                 if (pageName === 'library') {
                     displayBooks(availableBooks);
                 }
+                
+                console.log(`📄 Loaded page: ${pageName}`);
             }
         }
 
-        // Event Listeners
+        // ===== EVENT LISTENERS =====
         document.addEventListener('DOMContentLoaded', () => {
-            const savedUser = safeGetItem('campusconnect_current_user');
+            const savedUser = get('campusconnect_current_user');
             if (savedUser) {
                 currentUser = savedUser;
                 showMainApp();
@@ -1852,25 +1539,11 @@ Keep it concise and use emojis.`
                 notificationBtn.addEventListener('click', toggleNotifications);
             }
 
-            // QR Scanner
+            // QR Scanner FAB
             const fabQr = document.getElementById('fab-qr');
-            const closeQr = document.getElementById('close-qr-scanner');
-            const tabScan = document.getElementById('tab-scan');
-            const tabMyCode = document.getElementById('tab-my-code');
-            
             if (fabQr) fabQr.addEventListener('click', openQrModal);
-            if (closeQr) closeQr.addEventListener('click', closeQrModal);
-            if (tabScan) tabScan.addEventListener('click', () => switchQrTab('scan'));
-            if (tabMyCode) tabMyCode.addEventListener('click', () => switchQrTab('my-code'));
-        });
-
-        // Error Recovery
-        window.addEventListener('error', (event) => {
-            console.error('Error:', event.error);
-        });
-
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('Unhandled promise rejection:', event.reason);
+            
+            console.log('✅ App initialized successfully');
         });
     </script>
 </body>
